@@ -14,47 +14,43 @@
         }
         .header {
             display: flex;
+            direction: ltr;
             justify-content: space-between;
-            align-items: center;
-            border-bottom: 3px solid #8B7355;
-            padding-bottom: 15px;
+            align-items: flex-start;
+            padding-bottom: 20px;
             margin-bottom: 10px;
         }
-        .header-logo {
-            width: 55px;
-            height: auto;
-        }
-        .header-center {
+        .logo-block {
             text-align: center;
-            flex: 1;
         }
-        .header-center h2 {
+        .logo-block img {
+            width: 120px;
+            height: auto;
+            display: block;
+            margin: 0 auto 8px;
+        }
+        .logo-block .logo-text-ar {
+            font-size: 11pt;
+            font-weight: bold;
             color: #8B7355;
             margin: 0;
-            font-size: 16pt;
-            letter-spacing: 3px;
+            letter-spacing: 2px;
         }
-        .header-center h3 {
-            color: #003366;
-            margin: 5px 0 0;
-            font-size: 13pt;
-        }
-        .header-center p {
-            margin: 2px 0 0;
-            font-size: 10pt;
+        .logo-block .logo-text-en {
+            font-size: 9pt;
             color: #666;
+            margin: 0;
         }
 
         .title-bar {
-            background: #8B7355;
+            background: #3C5068;
             color: white;
             text-align: center;
-            padding: 8px 15px;
-            font-size: 14pt;
+            padding: 10px 15px;
+            font-size: 16pt;
             font-weight: bold;
-            margin: 10px 0;
-            border-radius: 4px;
-            letter-spacing: 5px;
+            margin: 10px 0 20px;
+            letter-spacing: 3px;
         }
 
         .info-table {
@@ -155,17 +151,20 @@
 <body>
     <!-- Header with Logos -->
     <div class="header">
-        <img src="file://{{ pp_logo_path }}" class="header-logo" alt="النيابة العامة">
-        <div class="header-center">
-            <h2>النيابة العامة الاتحادية</h2>
-            <h3>سمارت وورلد للغات والتكنولوجيا</h3>
-            <p>Smart World for Language &amp; Technology</p>
+        <div class="logo-block">
+            <img src="file://{{ pp_logo_path }}" alt="النيابة العامة">
+            <p class="logo-text-ar">الـنـيـابـة الـعـامـة</p>
+            <p class="logo-text-en">PUBLIC PROSECUTION</p>
         </div>
-        <img src="file://{{ uae_emblem_path }}" class="header-logo" alt="الإمارات العربية المتحدة">
+        <div class="logo-block">
+            <img src="file://{{ uae_emblem_path }}" alt="الإمارات العربية المتحدة">
+            <p class="logo-text-ar">الإمارات العربية المتحدة</p>
+            <p class="logo-text-en">United Arab Emirates</p>
+        </div>
     </div>
 
     <!-- Title -->
-    <div class="title-bar">شهـــادة إنجـــاز</div>
+    <div class="title-bar">شهادة إنجاز</div>
 
     <!-- Certificate & Contract Info -->
     <table class="info-table">
