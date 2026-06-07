@@ -364,14 +364,20 @@ def order_certificate(request, pk):
 def order_pdf(request, pk):
     order = get_object_or_404(WorkOrder, pk=pk)
     lang_lines = order.languages.select_related('language').all()
-    import os
+    import os, base64
     static_dir = settings.STATICFILES_DIRS[0] if settings.STATICFILES_DIRS else settings.STATIC_ROOT
+    pp_logo_file = os.path.join(static_dir, 'images', 'pp_logo.png')
+    uae_emblem_file = os.path.join(static_dir, 'images', 'uae_emblem.png')
+    with open(pp_logo_file, 'rb') as f:
+        pp_logo_b64 = base64.b64encode(f.read()).decode()
+    with open(uae_emblem_file, 'rb') as f:
+        uae_emblem_b64 = base64.b64encode(f.read()).decode()
     context = {
         'order': order,
         'lang_lines': lang_lines,
         'contract_number': settings.CONTRACT_NUMBER,
-        'uae_emblem_path': os.path.join(static_dir, 'images', 'uae_emblem.png'),
-        'pp_logo_path': os.path.join(static_dir, 'images', 'pp_logo.png'),
+        'pp_logo_data': f'data:image/png;base64,{pp_logo_b64}',
+        'uae_emblem_data': f'data:image/png;base64,{uae_emblem_b64}',
     }
     html = render(request, 'pdf/work_order.html', context).content.decode('utf-8')
 
@@ -393,16 +399,22 @@ def certificate_pdf(request, pk):
     except CompletionCertificate.DoesNotExist:
         return HttpResponse('لا توجد شهادة', status=404)
 
-    import os
+    import os, base64
     static_dir = settings.STATICFILES_DIRS[0] if settings.STATICFILES_DIRS else settings.STATIC_ROOT
+    pp_logo_file = os.path.join(static_dir, 'images', 'pp_logo.png')
+    uae_emblem_file = os.path.join(static_dir, 'images', 'uae_emblem.png')
+    with open(pp_logo_file, 'rb') as f:
+        pp_logo_b64 = base64.b64encode(f.read()).decode()
+    with open(uae_emblem_file, 'rb') as f:
+        uae_emblem_b64 = base64.b64encode(f.read()).decode()
     service_records = order.service_records.select_related('language').all()
     context = {
         'order': order,
         'certificate': certificate,
         'service_records': service_records,
         'contract_number': settings.CONTRACT_NUMBER,
-        'uae_emblem_path': os.path.join(static_dir, 'images', 'uae_emblem.png'),
-        'pp_logo_path': os.path.join(static_dir, 'images', 'pp_logo.png'),
+        'pp_logo_data': f'data:image/png;base64,{pp_logo_b64}',
+        'uae_emblem_data': f'data:image/png;base64,{uae_emblem_b64}',
     }
     html = render(request, 'pdf/certificate.html', context).content.decode('utf-8')
 
