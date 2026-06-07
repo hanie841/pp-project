@@ -143,7 +143,12 @@ class WorkOrder(models.Model):
     )
     prosecutor = models.ForeignKey(
         Prosecutor, on_delete=models.PROTECT,
-        related_name='work_orders', verbose_name='المحقق'
+        related_name='work_orders', verbose_name='المحقق',
+        null=True, blank=True
+    )
+    custom_prosecutor_name = models.CharField(
+        'اسم المحقق (يدوي)', max_length=200, blank=True,
+        help_text='في حال عدم وجود المحقق في القائمة'
     )
     service_type = models.CharField(
         'نوع الخدمة', max_length=20, choices=ServiceType.choices
@@ -209,6 +214,12 @@ class WorkOrder(models.Model):
         return total
 
     @property
+    def prosecutor_display(self):
+        if self.prosecutor:
+            return self.prosecutor.name
+        return self.custom_prosecutor_name or '-'
+
+    @property
     def is_interpretation(self):
         return self.service_type == self.ServiceType.INTERPRETATION
 
@@ -230,6 +241,10 @@ class WorkOrderLanguage(models.Model):
     language = models.ForeignKey(
         Language, on_delete=models.PROTECT, verbose_name='اللغة'
     )
+    custom_language_name = models.CharField(
+        'اسم اللغة (يدوي)', max_length=200, blank=True,
+        help_text='في حال اختيار "أخرى"'
+    )
     num_translators = models.PositiveIntegerField('عدد المترجمين', default=1)
     estimated_hours = models.DecimalField(
         'الساعات التقديرية', max_digits=6, decimal_places=2, null=True, blank=True
@@ -243,7 +258,13 @@ class WorkOrderLanguage(models.Model):
         verbose_name_plural = 'لغات أمر التكليف'
 
     def __str__(self):
-        return f'{self.language.name_ar} x{self.num_translators}'
+        return f'{self.language_display} x{self.num_translators}'
+
+    @property
+    def language_display(self):
+        if self.language.name_en == 'Other' and self.custom_language_name:
+            return self.custom_language_name
+        return self.language.name_ar
 
     @property
     def estimated_amount(self):

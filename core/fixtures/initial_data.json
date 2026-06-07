@@ -50,6 +50,66 @@
     }
   },
   {
+    "model": "core.language",
+    "pk": 6,
+    "fields": {
+      "name_ar": "الروسية",
+      "name_en": "Russian",
+      "hourly_rate": "350.00",
+      "page_rate": "135.00"
+    }
+  },
+  {
+    "model": "core.language",
+    "pk": 7,
+    "fields": {
+      "name_ar": "الصينية",
+      "name_en": "Chinese",
+      "hourly_rate": "350.00",
+      "page_rate": "135.00"
+    }
+  },
+  {
+    "model": "core.language",
+    "pk": 8,
+    "fields": {
+      "name_ar": "الفيتنامية",
+      "name_en": "Vietnamese",
+      "hourly_rate": "350.00",
+      "page_rate": "135.00"
+    }
+  },
+  {
+    "model": "core.language",
+    "pk": 9,
+    "fields": {
+      "name_ar": "السريلانكية",
+      "name_en": "Sinhala",
+      "hourly_rate": "350.00",
+      "page_rate": "135.00"
+    }
+  },
+  {
+    "model": "core.language",
+    "pk": 10,
+    "fields": {
+      "name_ar": "الهندية",
+      "name_en": "Hindi",
+      "hourly_rate": "350.00",
+      "page_rate": "135.00"
+    }
+  },
+  {
+    "model": "core.language",
+    "pk": 11,
+    "fields": {
+      "name_ar": "الفلبينية (تاغالوغ)",
+      "name_en": "Filipino/Tagalog",
+      "hourly_rate": "350.00",
+      "page_rate": "135.00"
+    }
+  },
+  {
     "model": "core.prosecution",
     "pk": 1,
     "fields": {

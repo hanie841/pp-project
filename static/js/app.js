@@ -27,6 +27,34 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // =============================================
+    // Custom language name: show/hide when "Other" selected
+    // =============================================
+    function bindCustomLanguageToggle() {
+        document.querySelectorAll('.language-row').forEach(row => {
+            const langSelect = row.querySelector('.language-select');
+            const customGroup = row.querySelector('.custom-lang-group');
+            const customInput = row.querySelector('.custom-lang-name');
+            if (!langSelect || !customGroup) return;
+
+            function toggleCustomLang() {
+                const selectedOption = langSelect.options[langSelect.selectedIndex];
+                const isOther = selectedOption && selectedOption.text.trim() === 'أخرى';
+                customGroup.style.display = isOther ? '' : 'none';
+                if (customInput) {
+                    customInput.style.display = '';
+                    if (!isOther) customInput.value = '';
+                }
+            }
+
+            langSelect.removeEventListener('change', toggleCustomLang);
+            langSelect.addEventListener('change', toggleCustomLang);
+            toggleCustomLang();
+        });
+    }
+
+    bindCustomLanguageToggle();
+
+    // =============================================
     // Work Order Create: Add/remove language rows
     // =============================================
     const addBtn = document.getElementById('addLanguage');
@@ -63,9 +91,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 lastCol.prepend(removeBtn);
             }
 
-            // Reset estimated cost
+            // Reset estimated cost and hide custom lang
             const costDisplay = newRow.querySelector('.estimated-cost');
             if (costDisplay) costDisplay.textContent = '0.00 درهم';
+            const customGroup = newRow.querySelector('.custom-lang-group');
+            if (customGroup) customGroup.style.display = 'none';
 
             formContainer.appendChild(newRow);
             totalForms.value = currentCount + 1;
@@ -74,6 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (serviceTypeSelect) toggleFields();
             bindRemoveButtons();
             bindCostCalculation();
+            bindCustomLanguageToggle();
         });
     }
 

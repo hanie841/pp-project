@@ -36,7 +36,7 @@
 
     <table class="info-table">
         <tr><th>رقم أمر التكليف:</th><td>{{ order.order_number }}</td><th>تاريخ الطلب:</th><td>{{ order.request_date|date:"Y/m/d" }}</td></tr>
-        <tr><th>النيابة:</th><td>{{ order.prosecution.name }}</td><th>المحقق:</th><td>{{ order.prosecutor.name }}</td></tr>
+        <tr><th>النيابة:</th><td>{{ order.prosecution.name }}</td><th>المحقق:</th><td>{{ order.prosecutor_display }}</td></tr>
         <tr><th>نوع الخدمة:</th><td>{{ order.get_service_type_display }}</td><th>تاريخ التنفيذ:</th><td>{{ order.execution_date|date:"Y/m/d" }} {{ order.execution_time|time:"H:i" }}</td></tr>
         <tr><th>نوع الموقع:</th><td>{{ order.get_location_type_display }}</td><th>المدة التقديرية:</th><td>{% if order.estimated_duration %}{{ order.estimated_duration }} ساعة{% else %}-{% endif %}</td></tr>
         {% if order.location_detail %}
@@ -62,7 +62,7 @@
             {% for lang in lang_lines %}
             <tr>
                 <td>{{ forloop.counter }}</td>
-                <td>{{ lang.language.name_ar }}</td>
+                <td>{{ lang.language_display }}</td>
                 <td>{{ lang.num_translators }}</td>
                 <td>{% if lang.estimated_hours %}{{ lang.estimated_hours }}{% else %}{{ lang.estimated_pages }}{% endif %}</td>
                 <td>{% if lang.estimated_hours %}{{ lang.language.hourly_rate }}{% else %}{{ lang.language.page_rate }}{% endif %}</td>

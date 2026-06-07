@@ -37,7 +37,7 @@
                         {% for record in service_records %}
                         {% if record.language_id == lang_line.language_id %}
                         <tr>
-                            <td>{{ lang_line.language.name_ar }}</td>
+                            <td>{{ lang_line.language_display }}</td>
                             <td>
                                 {{ lang_line.num_translators }} &rarr; {{ record.num_translators }}
                             </td>

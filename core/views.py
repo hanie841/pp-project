@@ -68,7 +68,18 @@ def dashboard(request):
     else:
         context['usage_percent'] = 0
 
-    if profile and profile.is_pp_staff:
+    if request.user.is_superuser:
+        context['all_orders'] = WorkOrder.objects.all()[:20]
+        context['incoming_orders'] = WorkOrder.objects.filter(
+            status=WorkOrder.Status.SUBMITTED
+        )[:10]
+        context['to_log'] = WorkOrder.objects.filter(
+            status=WorkOrder.Status.ACCEPTED
+        )[:10]
+        context['pending_approvals'] = WorkOrder.objects.filter(
+            status=WorkOrder.Status.PENDING_APPROVAL
+        )[:10]
+    elif profile and profile.is_pp_staff:
         context['my_orders'] = WorkOrder.objects.filter(
             created_by=request.user
         ).exclude(status=WorkOrder.Status.DRAFT)[:10]
@@ -127,7 +138,7 @@ def order_list(request):
 @login_required
 def order_create(request):
     profile = _get_profile(request.user)
-    if not profile or not profile.is_pp_staff:
+    if not request.user.is_superuser and (not profile or not profile.is_pp_staff):
         return HttpResponseForbidden('غير مسموح')
 
     if request.method == 'POST':
@@ -165,7 +176,7 @@ def order_detail(request, pk):
     profile = _get_profile(request.user)
 
     meeting_link_form = None
-    if (profile and profile.is_smartworld
+    if ((request.user.is_superuser or (profile and profile.is_smartworld))
             and order.location_type == WorkOrder.LocationType.NEED_LINK
             and order.status in (WorkOrder.Status.SUBMITTED, WorkOrder.Status.ACCEPTED)):
         meeting_link_form = MeetingLinkForm()
@@ -181,7 +192,7 @@ def order_detail(request, pk):
 def order_accept(request, pk):
     order = get_object_or_404(WorkOrder, pk=pk)
     profile = _get_profile(request.user)
-    if not profile or not profile.is_smartworld:
+    if not request.user.is_superuser and (not profile or not profile.is_smartworld):
         return HttpResponseForbidden('غير مسموح')
     if order.status != WorkOrder.Status.SUBMITTED:
         messages.error(request, 'لا يمكن قبول هذا الأمر')
@@ -198,7 +209,7 @@ def order_accept(request, pk):
 def order_provide_link(request, pk):
     order = get_object_or_404(WorkOrder, pk=pk)
     profile = _get_profile(request.user)
-    if not profile or not profile.is_smartworld:
+    if not request.user.is_superuser and (not profile or not profile.is_smartworld):
         return HttpResponseForbidden('غير مسموح')
 
     if request.method == 'POST':
@@ -216,7 +227,7 @@ def order_provide_link(request, pk):
 def order_log_service(request, pk):
     order = get_object_or_404(WorkOrder, pk=pk)
     profile = _get_profile(request.user)
-    if not profile or not profile.is_smartworld:
+    if not request.user.is_superuser and (not profile or not profile.is_smartworld):
         return HttpResponseForbidden('غير مسموح')
     if order.status not in (WorkOrder.Status.ACCEPTED, WorkOrder.Status.IN_PROGRESS, WorkOrder.Status.DISPUTED):
         messages.error(request, 'لا يمكن تسجيل الخدمة لهذا الأمر')
@@ -276,7 +287,7 @@ def order_log_service(request, pk):
 def order_approve(request, pk):
     order = get_object_or_404(WorkOrder, pk=pk)
     profile = _get_profile(request.user)
-    if not profile or not profile.is_pp_staff:
+    if not request.user.is_superuser and (not profile or not profile.is_pp_staff):
         return HttpResponseForbidden('غير مسموح')
     if order.status != WorkOrder.Status.PENDING_APPROVAL:
         messages.error(request, 'لا يمكن اعتماد هذا الأمر')

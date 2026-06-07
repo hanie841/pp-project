@@ -15,17 +15,25 @@
                 <div class="card-header"><i class="bi bi-building"></i> معلومات النيابة</div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label for="id_prosecution" class="form-label">النيابة *</label>
                             {{ form.prosecution }}
                             {% if form.prosecution.errors %}<div class="text-danger small">{{ form.prosecution.errors.0 }}</div>{% endif %}
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="id_prosecutor" class="form-label">المحقق *</label>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_prosecutor" class="form-label">المحقق</label>
                             {{ form.prosecutor }}
                             {% if form.prosecutor.errors %}<div class="text-danger small">{{ form.prosecutor.errors.0 }}</div>{% endif %}
                         </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_custom_prosecutor_name" class="form-label">أو اكتب اسم المحقق</label>
+                            {{ form.custom_prosecutor_name }}
+                            {% if form.custom_prosecutor_name.errors %}<div class="text-danger small">{{ form.custom_prosecutor_name.errors.0 }}</div>{% endif %}
+                        </div>
                     </div>
+                    {% if form.non_field_errors %}
+                    <div class="text-danger small mb-2">{{ form.non_field_errors.0 }}</div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -68,9 +76,13 @@
                         {% for lang_form in formset %}
                         <div class="language-row border rounded p-3 mb-3">
                             <div class="row align-items-end">
-                                <div class="col-md-3 mb-2">
+                                <div class="col-md-2 mb-2">
                                     <label class="form-label">اللغة *</label>
                                     {{ lang_form.language }}
+                                </div>
+                                <div class="col-md-2 mb-2 custom-lang-group" style="display:none;">
+                                    <label class="form-label">اسم اللغة</label>
+                                    {{ lang_form.custom_language_name }}
                                 </div>
                                 <div class="col-md-2 mb-2">
                                     <label class="form-label">عدد المترجمين</label>

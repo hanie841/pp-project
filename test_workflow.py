@@ -52,10 +52,30 @@ def run_tests():
     pp_client = Client()
     sw_client = Client()
     cm_client = Client()
+    sw_regular_client = Client()  # Non-superuser SmartWorld for access control tests
 
     pp_user = User.objects.get(username='pp_staff')
     sw_user = User.objects.get(username='admin')
     cm_user = User.objects.get(username='contract_mgr')
+
+    # Create a non-superuser SmartWorld user for access control tests
+    sw_regular_user, _ = User.objects.get_or_create(
+        username='sw_regular',
+        defaults={'first_name': 'SW', 'last_name': 'Regular', 'is_staff': False}
+    )
+    sw_regular_user.set_password('sw123')
+    sw_regular_user.save()
+    UserProfile.objects.get_or_create(
+        user=sw_regular_user,
+        defaults={'role': UserProfile.Role.SMARTWORLD_STAFF}
+    )
+
+    # Clean up from previous test runs
+    CompletionCertificate.objects.all().delete()
+    ServiceRecord.objects.all().delete()
+    WorkOrderApproval.objects.all().delete()
+    WorkOrderLanguage.objects.all().delete()
+    WorkOrder.objects.all().delete()
 
     prosecution = Prosecution.objects.first()
     prosecutor = Prosecutor.objects.filter(prosecution=prosecution).first()
@@ -96,9 +116,10 @@ def run_tests():
     resp = pp_client.get('/orders/new/')
     check('Work order create page loads', resp.status_code == 200)
 
-    # SmartWorld should NOT access create page
-    resp = sw_client.get('/orders/new/')
-    check('SmartWorld cannot access create page', resp.status_code == 403)
+    # Non-superuser SmartWorld should NOT access create page
+    sw_regular_client.post('/login/', {'username': 'sw_regular', 'password': 'sw123'})
+    resp = sw_regular_client.get('/orders/new/')
+    check('SmartWorld (non-admin) cannot access create page', resp.status_code == 403)
 
     # Submit work order with English + Urdu interpretation
     post_data = {
@@ -120,11 +141,13 @@ def run_tests():
         'languages-MAX_NUM_FORMS': '1000',
         # Language 1: English
         'languages-0-language': english.pk,
+        'languages-0-custom_language_name': '',
         'languages-0-num_translators': '1',
         'languages-0-estimated_hours': '2',
         'languages-0-estimated_pages': '',
         # Language 2: Urdu
         'languages-1-language': urdu.pk,
+        'languages-1-custom_language_name': '',
         'languages-1-num_translators': '2',
         'languages-1-estimated_hours': '2',
         'languages-1-estimated_pages': '',
@@ -352,6 +375,7 @@ def run_tests():
         'languages-MIN_NUM_FORMS': '1',
         'languages-MAX_NUM_FORMS': '1000',
         'languages-0-language': english.pk,
+        'languages-0-custom_language_name': '',
         'languages-0-num_translators': '1',
         'languages-0-estimated_hours': '',
         'languages-0-estimated_pages': '10',
@@ -478,9 +502,9 @@ def run_tests():
     resp = anon.get('/orders/new/')
     check('Unauthenticated user redirected from create', resp.status_code == 302)
 
-    # SmartWorld cannot create orders
-    resp = sw_client.get('/orders/new/')
-    check('SmartWorld blocked from creating orders', resp.status_code == 403)
+    # Non-superuser SmartWorld cannot create orders
+    resp = sw_regular_client.get('/orders/new/')
+    check('SmartWorld (non-admin) blocked from creating orders', resp.status_code == 403)
 
     # PP cannot log service
     resp = pp_client.get(f'/orders/{order_pk}/log/')
@@ -489,6 +513,12 @@ def run_tests():
     # PP cannot accept orders
     resp = pp_client.post(f'/orders/{order_pk}/accept/')
     check('PP Staff blocked from accepting orders', resp.status_code == 403)
+
+    # Admin (superuser) CAN create orders
+    admin_client = Client()
+    admin_client.post('/login/', {'username': 'admin', 'password': 'admin123'})
+    resp = admin_client.get('/orders/new/')
+    check('Admin (superuser) can access create page', resp.status_code == 200)
 
     # =============================================
     print('\n--- STEP 16: Admin Site ---')

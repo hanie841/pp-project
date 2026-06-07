@@ -63,7 +63,7 @@
                             <tr><th>رقم الأمر:</th><td>{{ order.order_number }}</td></tr>
                             <tr><th>تاريخ الطلب:</th><td>{{ order.request_date|date:"Y/m/d" }}</td></tr>
                             <tr><th>النيابة:</th><td>{{ order.prosecution.name }}</td></tr>
-                            <tr><th>المحقق:</th><td>{{ order.prosecutor.name }}</td></tr>
+                            <tr><th>المحقق:</th><td>{{ order.prosecutor_display }}</td></tr>
                             <tr><th>نوع الخدمة:</th><td>{{ order.get_service_type_display }}</td></tr>
                             <tr><th>الحالة:</th><td><span class="badge bg-secondary">{{ order.get_status_display }}</span></td></tr>
                             <tr><th>مقدم بواسطة:</th><td>{{ order.created_by.get_full_name }}</td></tr>
@@ -118,7 +118,7 @@
                     <tbody>
                         {% for lang in order.languages.all %}
                         <tr>
-                            <td>{{ lang.language.name_ar }}</td>
+                            <td>{{ lang.language_display }}</td>
                             <td>{{ lang.num_translators }}</td>
                             <td>{% if lang.estimated_hours %}{{ lang.estimated_hours }}{% else %}{{ lang.estimated_pages }}{% endif %}</td>
                             <td>{% if lang.estimated_hours %}{{ lang.language.hourly_rate }}{% else %}{{ lang.language.page_rate }}{% endif %} درهم</td>
@@ -184,7 +184,8 @@
 
         <!-- Action Buttons -->
         <div class="d-flex gap-2 mt-4">
-            {% if profile and profile.is_smartworld and order.status == 'SUBMITTED' %}
+            {% if user.is_superuser or profile and profile.is_smartworld %}
+            {% if order.status == 'SUBMITTED' %}
             <form method="post" action="{% url 'order_accept' order.pk %}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-success btn-lg">
@@ -192,17 +193,24 @@
                 </button>
             </form>
             {% endif %}
-
-            {% if profile and profile.is_smartworld and order.status == 'ACCEPTED' %}
+            {% if order.status == 'ACCEPTED' %}
             <a href="{% url 'order_log_service' order.pk %}" class="btn btn-primary btn-lg">
                 <i class="bi bi-pencil-square"></i> تسجيل الخدمة الفعلية
-                </a>
+            </a>
+            {% endif %}
+            {% if order.status == 'DISPUTED' %}
+            <a href="{% url 'order_log_service' order.pk %}" class="btn btn-warning btn-lg">
+                <i class="bi bi-arrow-repeat"></i> إعادة تسجيل الخدمة
+            </a>
+            {% endif %}
             {% endif %}
 
-            {% if profile and profile.is_pp_staff and order.status == 'PENDING_APPROVAL' %}
+            {% if user.is_superuser or profile and profile.is_pp_staff %}
+            {% if order.status == 'PENDING_APPROVAL' %}
             <a href="{% url 'order_approve' order.pk %}" class="btn btn-warning btn-lg">
                 <i class="bi bi-clipboard-check"></i> مراجعة واعتماد
             </a>
+            {% endif %}
             {% endif %}
 
             {% if order.status == 'COMPLETED' %}
@@ -210,16 +218,10 @@
                 <i class="bi bi-award"></i> شهادة الإنجاز
             </a>
             {% endif %}
-
-            {% if profile and profile.is_smartworld and order.status == 'DISPUTED' %}
-            <a href="{% url 'order_log_service' order.pk %}" class="btn btn-warning btn-lg">
-                <i class="bi bi-arrow-repeat"></i> إعادة تسجيل الخدمة
-            </a>
-            {% endif %}
         </div>
 
         <!-- Meeting Link Form -->
-        {% if meeting_link_form %}
+        {% if meeting_link_form or user.is_superuser and order.location_type == 'NEED_LINK' and order.status in 'SUBMITTED,ACCEPTED' %}
         <div class="card mt-4">
             <div class="card-header bg-info text-white">
                 <i class="bi bi-link-45deg"></i> توفير رابط الاجتماع
