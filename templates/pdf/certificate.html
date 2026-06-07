@@ -3,76 +3,227 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        @page { size: A4; margin: 2cm; }
+        @page { size: A4; margin: 1.5cm 2cm; }
         body {
             font-family: 'Arial', 'Tahoma', sans-serif;
-            font-size: 12pt;
+            font-size: 11pt;
             direction: rtl;
             text-align: right;
-            line-height: 1.8;
+            line-height: 1.6;
+            color: #333;
         }
-        .header { text-align: center; margin-bottom: 20px; border-bottom: 3px solid #003366; padding-bottom: 15px; }
-        .header h2 { color: #003366; margin: 5px 0; }
-        .header h3 { color: #006633; margin: 5px 0; }
-        .info-section { margin-bottom: 15px; }
-        .info-row { display: flex; margin-bottom: 5px; }
-        .info-label { font-weight: bold; min-width: 150px; }
-        table.items { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        table.items th, table.items td { border: 1px solid #333; padding: 8px 12px; text-align: center; }
-        table.items th { background: #003366; color: white; }
-        table.items tfoot th, table.items tfoot td { font-weight: bold; }
-        .subtotal-row { background: #f0f0f0; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #8B7355;
+            padding-bottom: 15px;
+            margin-bottom: 10px;
+        }
+        .header-logo {
+            width: 100px;
+            height: auto;
+        }
+        .header-center {
+            text-align: center;
+            flex: 1;
+        }
+        .header-center h2 {
+            color: #8B7355;
+            margin: 0;
+            font-size: 16pt;
+            letter-spacing: 3px;
+        }
+        .header-center h3 {
+            color: #003366;
+            margin: 5px 0 0;
+            font-size: 13pt;
+        }
+        .header-center p {
+            margin: 2px 0 0;
+            font-size: 10pt;
+            color: #666;
+        }
+
+        .title-bar {
+            background: #8B7355;
+            color: white;
+            text-align: center;
+            padding: 8px 15px;
+            font-size: 14pt;
+            font-weight: bold;
+            margin: 10px 0;
+            border-radius: 4px;
+            letter-spacing: 5px;
+        }
+
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        .info-table td, .info-table th {
+            padding: 5px 10px;
+            border: 1px solid #ccc;
+            font-size: 10pt;
+        }
+        .info-table th {
+            background: #f5f0eb;
+            color: #8B7355;
+            width: 18%;
+            font-weight: bold;
+        }
+        .info-table td {
+            width: 32%;
+        }
+
+        table.items {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        table.items th, table.items td {
+            border: 1px solid #333;
+            padding: 6px 10px;
+            text-align: center;
+            font-size: 10pt;
+        }
+        table.items th {
+            background: #8B7355;
+            color: white;
+        }
+        table.items tfoot th, table.items tfoot td {
+            font-weight: bold;
+        }
+        .subtotal-row { background: #f5f0eb; }
         .vat-row { background: #fff8e1; }
-        .total-row { background: #003366; color: white; font-size: 14pt; }
-        .signatures { margin-top: 50px; width: 100%; }
-        .sig-box { display: inline-block; width: 30%; text-align: center; vertical-align: top; }
-        .sig-line { border-top: 1px solid #333; margin-top: 70px; padding-top: 10px; }
-        .footer { font-size: 9pt; color: #888; text-align: center; margin-top: 30px; border-top: 1px solid #ccc; padding-top: 10px; }
-        .info-table { width: 100%; margin-bottom: 15px; }
-        .info-table td, .info-table th { padding: 4px 10px; }
-        .info-table th { background: #f5f5f5; width: 25%; }
+        .total-row { background: #8B7355; color: white; font-size: 12pt; }
+
+        .section-title {
+            color: #8B7355;
+            font-size: 11pt;
+            font-weight: bold;
+            border-bottom: 1px solid #8B7355;
+            padding-bottom: 3px;
+            margin: 15px 0 10px;
+        }
+
+        .signature-section {
+            margin-top: 25px;
+            page-break-inside: avoid;
+        }
+        .sig-grid {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        .sig-box {
+            width: 30%;
+            text-align: center;
+        }
+        .sig-label {
+            font-weight: bold;
+            font-size: 10pt;
+            color: #8B7355;
+            margin-bottom: 5px;
+        }
+        .sig-name {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-size: 16pt;
+            font-style: italic;
+            color: #003366;
+            min-height: 35px;
+            padding: 8px 0;
+        }
+        .sig-line {
+            border-top: 1px solid #333;
+            padding-top: 5px;
+            font-size: 9pt;
+            color: #666;
+        }
+
+        .footer {
+            font-size: 8pt;
+            color: #888;
+            text-align: center;
+            margin-top: 15px;
+            border-top: 1px solid #ddd;
+            padding-top: 8px;
+        }
     </style>
 </head>
 <body>
+    <!-- Header with Logos -->
     <div class="header">
-        <h2>النيابة العامة الاتحادية</h2>
-        <h2>سمارت وورلد للغات والتكنولوجيا</h2>
-        <h3>شهادة إنجاز</h3>
-        <p>Completion Certificate</p>
+        <img src="file://{{ pp_logo_path }}" class="header-logo" alt="النيابة العامة">
+        <div class="header-center">
+            <h2>النيابة العامة الاتحادية</h2>
+            <h3>سمارت وورلد للغات والتكنولوجيا</h3>
+            <p>Smart World for Language &amp; Technology</p>
+        </div>
+        <img src="file://{{ uae_emblem_path }}" class="header-logo" alt="الإمارات العربية المتحدة">
     </div>
 
+    <!-- Title -->
+    <div class="title-bar">شهـــادة إنجـــاز</div>
+
+    <!-- Certificate & Contract Info -->
     <table class="info-table">
         <tr>
-            <th>رقم الشهادة:</th><td>{{ certificate.certificate_number }}</td>
-            <th>تاريخ الشهادة:</th><td>{{ certificate.certificate_date|date:"Y/m/d" }}</td>
+            <th>تكليف رقم:</th>
+            <td>{{ order.order_number }}</td>
+            <th>تاريخ شهادة الانجاز:</th>
+            <td>{{ certificate.certificate_date|date:"Y/m/d" }}</td>
         </tr>
         <tr>
-            <th>رقم أمر التكليف:</th><td>{{ order.order_number }}</td>
-            <th>رقم العقد:</th><td>{{ contract_number }}</td>
+            <th>موضوع العقد:</th>
+            <td>توفير خدمات ترجمة قانونية للنيابة العامة الاتحادية</td>
+            <th>مدير المشروع:</th>
+            <td>{% if order.approval.pp_approved_by %}{{ order.approval.pp_approved_by.get_full_name }}{% else %}-{% endif %}</td>
         </tr>
         <tr>
-            <th>رقم الفاتورة:</th><td>{{ certificate.invoice_number }}</td>
-            <th>تاريخ الفاتورة:</th><td>{{ certificate.invoice_date|date:"Y/m/d" }}</td>
+            <th>رقم العقد:</th>
+            <td>{{ contract_number }}</td>
+            <th>تاريخ العقد:</th>
+            <td>-</td>
         </tr>
         <tr>
-            <th>النيابة:</th><td>{{ order.prosecution.name }}</td>
-            <th>المحقق:</th><td>{{ order.prosecutor_display }}</td>
+            <th>إجمالي العقد:</th>
+            <td>500,000 درهم</td>
+            <th>النيابة:</th>
+            <td>{{ order.prosecution.name }}</td>
         </tr>
         <tr>
-            <th>نوع الخدمة:</th><td>{{ order.get_service_type_display }}</td>
-            <th>تاريخ التنفيذ:</th><td>{{ order.execution_date|date:"Y/m/d" }}</td>
+            <th>اسم المورد:</th>
+            <td>شركة سمارت وورلد للغة والتكنولوجيا</td>
+            <th>المحقق:</th>
+            <td>{{ order.prosecutor_display }}</td>
+        </tr>
+        <tr>
+            <th>رقم الفاتورة:</th>
+            <td>{{ certificate.invoice_number }}</td>
+            <th>تاريخ الفاتورة:</th>
+            <td>{{ certificate.invoice_date|date:"Y/m/d" }}</td>
+        </tr>
+        <tr>
+            <th>نوع الخدمة:</th>
+            <td>{{ order.get_service_type_display }}</td>
+            <th>تاريخ التنفيذ:</th>
+            <td>{{ order.execution_date|date:"Y/m/d" }}</td>
         </tr>
     </table>
 
+    <!-- Service Records Table -->
+    <div class="section-title">خدمات التنفيذ وفقا للعقد</div>
     <table class="items">
         <thead>
             <tr>
-                <th>#</th>
+                <th>م</th>
                 <th>اللغة</th>
                 <th>عدد المترجمين</th>
-                <th>{% if order.is_interpretation %}الساعات{% else %}الصفحات{% endif %}</th>
-                <th>سعر الوحدة (درهم)</th>
+                <th>نوع الخدمة</th>
                 <th>المبلغ (درهم)</th>
+                <th>الملاحظات</th>
             </tr>
         </thead>
         <tbody>
@@ -81,59 +232,66 @@
                 <td>{{ forloop.counter }}</td>
                 <td>{{ record.language.name_ar }}</td>
                 <td>{{ record.num_translators }}</td>
-                <td>{% if record.actual_hours %}{{ record.actual_hours }}{% else %}{{ record.actual_pages }}{% endif %}</td>
-                <td>{{ record.unit_rate|floatformat:2 }}</td>
+                <td>{% if record.actual_hours %}ترجمة فورية ({{ record.actual_hours }} ساعة){% else %}ترجمة تحريرية ({{ record.actual_pages }} صفحة){% endif %}</td>
                 <td>{{ record.amount|floatformat:2 }}</td>
+                <td>{{ record.notes|default:"-" }}</td>
             </tr>
             {% endfor %}
         </tbody>
         <tfoot>
             <tr class="subtotal-row">
-                <th colspan="5" style="text-align: right;">المجموع الفرعي</th>
+                <th colspan="4" style="text-align: right;">المجموع الفرعي</th>
                 <td>{{ certificate.subtotal|floatformat:2 }}</td>
+                <td></td>
             </tr>
             <tr class="vat-row">
-                <th colspan="5" style="text-align: right;">ضريبة القيمة المضافة ({{ certificate.vat_rate }}%)</th>
+                <th colspan="4" style="text-align: right;">ضريبة القيمة المضافة ({{ certificate.vat_rate }}%)</th>
                 <td>{{ certificate.vat_amount|floatformat:2 }}</td>
+                <td></td>
             </tr>
             <tr class="total-row">
-                <th colspan="5" style="text-align: right;">المجموع الكلي</th>
+                <th colspan="4" style="text-align: right;">إجمالي قيمة المستحقات</th>
                 <td>{{ certificate.grand_total|floatformat:2 }}</td>
+                <td></td>
             </tr>
         </tfoot>
     </table>
 
-    <div class="signatures">
-        <div class="sig-box">
-            <div class="sig-line">
-                <strong>مقدم الخدمة</strong><br>
-                سمارت وورلد للغات والتكنولوجيا<br>
-                {% if order.approval.smartworld_approved_by %}
-                {{ order.approval.smartworld_approved_by.get_full_name }}<br>
-                {{ order.approval.smartworld_approved_at|date:"Y/m/d" }}
-                {% endif %}
+    <!-- Signatures -->
+    <div class="signature-section">
+        <div class="sig-grid">
+            <div class="sig-box">
+                <div class="sig-label">اعتماد القسم الطالب</div>
+                <div class="sig-name">
+                    {% if order.approval.pp_approved_by %}{{ order.approval.pp_approved_by.get_full_name }}{% endif %}
+                </div>
+                <div class="sig-line">
+                    التوقيع<br>
+                    {% if order.approval.pp_approved_at %}{{ order.approval.pp_approved_at|date:"Y/m/d" }}{% endif %}
+                </div>
             </div>
-        </div>
-        <div class="sig-box">
-            <div class="sig-line">
-                <strong>الجهة المستفيدة</strong><br>
-                النيابة العامة الاتحادية<br>
-                {% if order.approval.pp_approved_by %}
-                {{ order.approval.pp_approved_by.get_full_name }}<br>
-                {{ order.approval.pp_approved_at|date:"Y/m/d" }}
-                {% endif %}
+            <div class="sig-box">
+                <div class="sig-label">مسؤول إدارة العقد</div>
+                <div class="sig-name">&nbsp;</div>
+                <div class="sig-line">
+                    التوقيع
+                </div>
             </div>
-        </div>
-        <div class="sig-box">
-            <div class="sig-line">
-                <strong>مدير العقد</strong><br>
-                إدارة العقود
+            <div class="sig-box">
+                <div class="sig-label">مسؤول العقد</div>
+                <div class="sig-name">
+                    {% if order.approval.smartworld_approved_by %}{{ order.approval.smartworld_approved_by.get_full_name }}{% endif %}
+                </div>
+                <div class="sig-line">
+                    التوقيع<br>
+                    {% if order.approval.smartworld_approved_at %}{{ order.approval.smartworld_approved_at|date:"Y/m/d" }}{% endif %}
+                </div>
             </div>
         </div>
     </div>
 
     <div class="footer">
-        عقد رقم {{ contract_number }} | شهادة إنجاز رقم {{ certificate.certificate_number }} | فاتورة رقم {{ certificate.invoice_number }}
+        عقد رقم {{ contract_number }} | شهادة إنجاز رقم {{ certificate.certificate_number }} | فاتورة رقم {{ certificate.invoice_number }} | سمارت وورلد للغات والتكنولوجيا
     </div>
 </body>
 </html>

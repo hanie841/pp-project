@@ -4,6 +4,22 @@ body {
     font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
 }
 
+/* Logo Bar */
+.logo-bar {
+    background: linear-gradient(to bottom, #fff, #f8f9fa);
+}
+
+.top-logo {
+    height: 55px;
+    width: auto;
+    object-fit: contain;
+}
+
+.logo-title {
+    color: #8B7355;
+    font-weight: bold;
+}
+
 /* Navbar */
 .navbar-brand {
     font-weight: bold;
@@ -38,8 +54,8 @@ body {
 
 .form-control:focus,
 .form-select:focus {
-    border-color: #003366;
-    box-shadow: 0 0 0 0.2rem rgba(0, 51, 102, 0.15);
+    border-color: #8B7355;
+    box-shadow: 0 0 0 0.2rem rgba(139, 115, 85, 0.15);
 }
 
 /* Language rows */
@@ -83,6 +99,15 @@ input[type="checkbox"][name$="-DELETE"] {
     display: none;
 }
 
+/* Signature style for web views */
+.signature-display {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 1.5em;
+    font-style: italic;
+    color: #003366;
+    padding: 5px 0;
+}
+
 /* Responsive fixes */
 @media (max-width: 768px) {
     .signature-box, .sig-box {
@@ -94,6 +119,14 @@ input[type="checkbox"][name$="-DELETE"] {
     .d-flex.gap-2 {
         flex-direction: column;
     }
+
+    .top-logo {
+        height: 35px;
+    }
+
+    .logo-title {
+        font-size: 0.9rem;
+    }
 }
 
 /* Phone/LTR fields */
@@ -103,7 +136,7 @@ input[type="checkbox"][name$="-DELETE"] {
 
 /* Print styles */
 @media print {
-    .navbar, footer, .btn, .alert-dismissible .btn-close {
+    .navbar, .logo-bar, footer, .btn, .alert-dismissible .btn-close {
         display: none !important;
     }
 }

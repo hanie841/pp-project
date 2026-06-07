@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load arabic_filters %}
+{% load static arabic_filters %}
 
 {% block title %}أمر تكليف {{ order.order_number }}{% endblock %}
 
@@ -90,7 +90,7 @@
                             <tr><th>تفاصيل الموقع:</th><td>{{ order.location_detail }}</td></tr>
                             {% endif %}
                             {% if order.contact_name %}
-                            <tr><th>جهة الاتصال:</th><td>{{ order.contact_name }}</td></tr>
+                            <tr><th>التوقيع:</th><td><span class="signature-display">{{ order.contact_name }}</span></td></tr>
                             {% endif %}
                             {% if order.contact_phone %}
                             <tr><th>الهاتف:</th><td dir="ltr">{{ order.contact_phone }}</td></tr>

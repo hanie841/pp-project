@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load arabic_filters %}
+{% load static arabic_filters %}
 
 {% block title %}شهادة إنجاز - {{ certificate.certificate_number }}{% endblock %}
 
@@ -20,52 +20,52 @@
 
         <div class="card">
             <div class="card-body p-4">
-                <!-- Header -->
+                <!-- Header with Logos -->
                 <div class="text-center mb-4">
-                    <h4>شهادة إنجاز</h4>
-                    <p class="text-muted">Completion Certificate</p>
+                    <div class="d-flex justify-content-center align-items-center gap-4 mb-3">
+                        <img src="{% static 'images/pp_logo.png' %}" alt="النيابة العامة" style="height: 60px;">
+                        <div>
+                            <h4 class="mb-0" style="color: #8B7355;">شهـــادة إنجـــاز</h4>
+                            <p class="text-muted mb-0">Completion Certificate</p>
+                        </div>
+                        <img src="{% static 'images/uae_emblem.png' %}" alt="الإمارات" style="height: 60px;">
+                    </div>
                 </div>
 
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <table class="table table-borderless table-sm">
-                            <tr><th>رقم الشهادة:</th><td>{{ certificate.certificate_number }}</td></tr>
-                            <tr><th>تاريخ الشهادة:</th><td>{{ certificate.certificate_date|date:"Y/m/d" }}</td></tr>
+                            <tr><th>تكليف رقم:</th><td>{{ order.order_number }}</td></tr>
+                            <tr><th>تاريخ شهادة الانجاز:</th><td>{{ certificate.certificate_date|date:"Y/m/d" }}</td></tr>
                             <tr><th>رقم العقد:</th><td>{{ contract_number }}</td></tr>
+                            <tr><th>موضوع العقد:</th><td>توفير خدمات ترجمة قانونية للنيابة العامة الاتحادية</td></tr>
+                            <tr><th>اسم المورد:</th><td>شركة سمارت وورلد للغة والتكنولوجيا</td></tr>
                         </table>
                     </div>
                     <div class="col-md-6">
                         <table class="table table-borderless table-sm">
-                            <tr><th>رقم أمر التكليف:</th><td>{{ order.order_number }}</td></tr>
                             <tr><th>رقم الفاتورة:</th><td>{{ certificate.invoice_number }}</td></tr>
                             <tr><th>تاريخ الفاتورة:</th><td>{{ certificate.invoice_date|date:"Y/m/d" }}</td></tr>
+                            <tr><th>إجمالي العقد:</th><td>500,000 درهم</td></tr>
+                            <tr><th>النيابة:</th><td>{{ order.prosecution.name }}</td></tr>
+                            <tr><th>نوع الخدمة:</th><td>{{ order.get_service_type_display }}</td></tr>
                         </table>
                     </div>
                 </div>
 
                 <hr>
 
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <h6>النيابة: {{ order.prosecution.name }}</h6>
-                        <p>المحقق: {{ order.prosecutor_display }}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>نوع الخدمة: {{ order.get_service_type_display }}</h6>
-                        <p>تاريخ التنفيذ: {{ order.execution_date|date:"Y/m/d" }}</p>
-                    </div>
-                </div>
-
                 <!-- Line Items -->
+                <h6 style="color: #8B7355;"><i class="bi bi-table"></i> خدمات التنفيذ وفقا للعقد</h6>
                 <table class="table table-bordered">
                     <thead class="table-dark">
                         <tr>
-                            <th>#</th>
+                            <th>م</th>
                             <th>اللغة</th>
                             <th>عدد المترجمين</th>
-                            <th>{% if order.is_interpretation %}الساعات{% else %}الصفحات{% endif %}</th>
-                            <th>سعر الوحدة</th>
+                            <th>نوع الخدمة</th>
                             <th>المبلغ (درهم)</th>
+                            <th>الملاحظات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -74,24 +74,27 @@
                             <td>{{ forloop.counter }}</td>
                             <td>{{ record.language.name_ar }}</td>
                             <td>{{ record.num_translators }}</td>
-                            <td>{% if record.actual_hours %}{{ record.actual_hours }}{% else %}{{ record.actual_pages }}{% endif %}</td>
-                            <td>{{ record.unit_rate|floatformat:2 }}</td>
+                            <td>{% if record.actual_hours %}ترجمة فورية ({{ record.actual_hours }} ساعة){% else %}ترجمة تحريرية ({{ record.actual_pages }} صفحة){% endif %}</td>
                             <td>{{ record.amount|floatformat:2 }}</td>
+                            <td>{{ record.notes|default:"-" }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                     <tfoot>
                         <tr>
-                            <th colspan="5" class="text-start">المجموع الفرعي</th>
+                            <th colspan="4" class="text-start">المجموع الفرعي</th>
                             <th>{{ certificate.subtotal|floatformat:2 }}</th>
+                            <td></td>
                         </tr>
                         <tr>
-                            <th colspan="5" class="text-start">ضريبة القيمة المضافة ({{ certificate.vat_rate }}%)</th>
+                            <th colspan="4" class="text-start">ضريبة القيمة المضافة ({{ certificate.vat_rate }}%)</th>
                             <th>{{ certificate.vat_amount|floatformat:2 }}</th>
+                            <td></td>
                         </tr>
                         <tr class="table-primary">
-                            <th colspan="5" class="text-start">المجموع الكلي</th>
+                            <th colspan="4" class="text-start">إجمالي قيمة المستحقات</th>
                             <th class="fs-5">{{ certificate.grand_total|floatformat:2 }}</th>
+                            <td></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -100,34 +103,41 @@
                 <div class="row mt-5">
                     <div class="col-md-4 text-center">
                         <div class="border-top pt-3">
-                            <strong>مقدم الخدمة</strong><br>
-                            <small>سمارت وورلد للغات والتكنولوجيا</small>
-                            {% if order.approval.smartworld_approved_at %}
-                            <br><small class="text-success">
-                                <i class="bi bi-check-circle"></i>
-                                {{ order.approval.smartworld_approved_by.get_full_name }}
-                                <br>{{ order.approval.smartworld_approved_at|date:"Y/m/d H:i" }}
-                            </small>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-4 text-center">
-                        <div class="border-top pt-3">
-                            <strong>الجهة المستفيدة</strong><br>
-                            <small>النيابة العامة الاتحادية</small>
+                            <strong style="color: #8B7355;">اعتماد القسم الطالب</strong><br>
                             {% if order.approval.pp_approved_at %}
-                            <br><small class="text-success">
+                            <div class="signature-display">{{ order.approval.pp_approved_by.get_full_name }}</div>
+                            <small class="text-success">
                                 <i class="bi bi-check-circle"></i>
-                                {{ order.approval.pp_approved_by.get_full_name }}
+                                التوقيع
                                 <br>{{ order.approval.pp_approved_at|date:"Y/m/d H:i" }}
                             </small>
+                            {% else %}
+                            <div class="signature-display">&nbsp;</div>
+                            <small class="text-muted">التوقيع</small>
                             {% endif %}
                         </div>
                     </div>
                     <div class="col-md-4 text-center">
                         <div class="border-top pt-3">
-                            <strong>مدير العقد</strong><br>
-                            <small>إدارة العقود</small>
+                            <strong style="color: #8B7355;">مسؤول إدارة العقد</strong><br>
+                            <div class="signature-display">&nbsp;</div>
+                            <small class="text-muted">التوقيع</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="border-top pt-3">
+                            <strong style="color: #8B7355;">مسؤول العقد</strong><br>
+                            {% if order.approval.smartworld_approved_at %}
+                            <div class="signature-display">{{ order.approval.smartworld_approved_by.get_full_name }}</div>
+                            <small class="text-success">
+                                <i class="bi bi-check-circle"></i>
+                                التوقيع
+                                <br>{{ order.approval.smartworld_approved_at|date:"Y/m/d H:i" }}
+                            </small>
+                            {% else %}
+                            <div class="signature-display">&nbsp;</div>
+                            <small class="text-muted">التوقيع</small>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

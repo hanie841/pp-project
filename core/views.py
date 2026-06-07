@@ -364,10 +364,14 @@ def order_certificate(request, pk):
 def order_pdf(request, pk):
     order = get_object_or_404(WorkOrder, pk=pk)
     lang_lines = order.languages.select_related('language').all()
+    import os
+    static_dir = settings.STATICFILES_DIRS[0] if settings.STATICFILES_DIRS else settings.STATIC_ROOT
     context = {
         'order': order,
         'lang_lines': lang_lines,
         'contract_number': settings.CONTRACT_NUMBER,
+        'uae_emblem_path': os.path.join(static_dir, 'images', 'uae_emblem.png'),
+        'pp_logo_path': os.path.join(static_dir, 'images', 'pp_logo.png'),
     }
     html = render(request, 'pdf/work_order.html', context).content.decode('utf-8')
 
@@ -389,12 +393,16 @@ def certificate_pdf(request, pk):
     except CompletionCertificate.DoesNotExist:
         return HttpResponse('لا توجد شهادة', status=404)
 
+    import os
+    static_dir = settings.STATICFILES_DIRS[0] if settings.STATICFILES_DIRS else settings.STATIC_ROOT
     service_records = order.service_records.select_related('language').all()
     context = {
         'order': order,
         'certificate': certificate,
         'service_records': service_records,
         'contract_number': settings.CONTRACT_NUMBER,
+        'uae_emblem_path': os.path.join(static_dir, 'images', 'uae_emblem.png'),
+        'pp_logo_path': os.path.join(static_dir, 'images', 'pp_logo.png'),
     }
     html = render(request, 'pdf/certificate.html', context).content.decode('utf-8')
 

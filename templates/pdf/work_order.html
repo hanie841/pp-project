@@ -3,57 +3,207 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        @page { size: A4; margin: 2cm; }
+        @page { size: A4; margin: 1.5cm 2cm; }
         body {
             font-family: 'Arial', 'Tahoma', sans-serif;
-            font-size: 12pt;
+            font-size: 11pt;
             direction: rtl;
             text-align: right;
-            line-height: 1.8;
+            line-height: 1.6;
+            color: #333;
         }
-        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #003366; padding-bottom: 15px; }
-        .header h2 { color: #003366; margin: 5px 0; }
-        .header h3 { color: #666; margin: 5px 0; }
-        .info-table { width: 100%; margin-bottom: 15px; }
-        .info-table td { padding: 5px 10px; }
-        .info-table th { padding: 5px 10px; background: #f0f0f0; width: 30%; }
-        table.data { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        table.data th, table.data td { border: 1px solid #333; padding: 8px 10px; text-align: center; }
-        table.data th { background: #003366; color: white; }
-        table.data tfoot th { background: #e8e8e8; color: #333; }
-        .signature-area { margin-top: 40px; }
-        .signature-box { display: inline-block; width: 45%; text-align: center; vertical-align: top; }
-        .signature-line { border-top: 1px solid #333; margin-top: 60px; padding-top: 5px; }
-        .contract-ref { font-size: 10pt; color: #666; text-align: center; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #8B7355;
+            padding-bottom: 15px;
+            margin-bottom: 10px;
+        }
+        .header-logo {
+            width: 100px;
+            height: auto;
+        }
+        .header-center {
+            text-align: center;
+            flex: 1;
+        }
+        .header-center h2 {
+            color: #8B7355;
+            margin: 0;
+            font-size: 16pt;
+        }
+        .header-center h3 {
+            color: #003366;
+            margin: 5px 0 0;
+            font-size: 13pt;
+        }
+        .header-center p {
+            margin: 2px 0 0;
+            font-size: 10pt;
+            color: #666;
+        }
+
+        .subject-bar {
+            background: #8B7355;
+            color: white;
+            text-align: center;
+            padding: 8px 15px;
+            font-size: 12pt;
+            font-weight: bold;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        .info-table td, .info-table th {
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            font-size: 10.5pt;
+        }
+        .info-table th {
+            background: #f5f0eb;
+            color: #8B7355;
+            width: 22%;
+            font-weight: bold;
+        }
+        .info-table td {
+            width: 28%;
+        }
+
+        table.data {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        table.data th, table.data td {
+            border: 1px solid #333;
+            padding: 6px 10px;
+            text-align: center;
+            font-size: 10.5pt;
+        }
+        table.data th {
+            background: #8B7355;
+            color: white;
+        }
+        table.data tfoot th {
+            background: #f5f0eb;
+            color: #333;
+        }
+
+        .signature-section {
+            margin-top: 30px;
+            page-break-inside: avoid;
+        }
+        .signature-section h4 {
+            color: #8B7355;
+            border-bottom: 2px solid #8B7355;
+            padding-bottom: 5px;
+            font-size: 12pt;
+        }
+        .sig-grid {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        .sig-box {
+            width: 45%;
+            text-align: center;
+        }
+        .sig-label {
+            font-weight: bold;
+            font-size: 10pt;
+            color: #8B7355;
+            margin-bottom: 5px;
+        }
+        .sig-name {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-size: 18pt;
+            font-style: italic;
+            color: #003366;
+            min-height: 40px;
+            padding: 10px 0;
+        }
+        .sig-line {
+            border-top: 1px solid #333;
+            padding-top: 5px;
+            font-size: 9pt;
+            color: #666;
+        }
+
+        .contract-ref {
+            font-size: 9pt;
+            color: #888;
+            text-align: center;
+            margin-top: 15px;
+            border-top: 1px solid #ddd;
+            padding-top: 8px;
+        }
     </style>
 </head>
 <body>
+    <!-- Header with Logos -->
     <div class="header">
-        <h2>النيابة العامة الاتحادية</h2>
-        <h3>أمر تكليف</h3>
-        <p>Work Order</p>
+        <img src="file://{{ pp_logo_path }}" class="header-logo" alt="النيابة العامة">
+        <div class="header-center">
+            <h2>النيابة العامة الاتحادية</h2>
+            <h3>أمر تكليف</h3>
+            <p>Work Order</p>
+        </div>
+        <img src="file://{{ uae_emblem_path }}" class="header-logo" alt="الإمارات العربية المتحدة">
     </div>
 
+    <!-- Subject Bar -->
+    <div class="subject-bar">
+        موضوع: توفير خدمات ترجمة قانونية للنيابة العامة الاتحادية
+    </div>
+
+    <!-- Order Info Table -->
     <table class="info-table">
-        <tr><th>رقم أمر التكليف:</th><td>{{ order.order_number }}</td><th>تاريخ الطلب:</th><td>{{ order.request_date|date:"Y/m/d" }}</td></tr>
-        <tr><th>النيابة:</th><td>{{ order.prosecution.name }}</td><th>المحقق:</th><td>{{ order.prosecutor_display }}</td></tr>
-        <tr><th>نوع الخدمة:</th><td>{{ order.get_service_type_display }}</td><th>تاريخ التنفيذ:</th><td>{{ order.execution_date|date:"Y/m/d" }} {{ order.execution_time|time:"H:i" }}</td></tr>
-        <tr><th>نوع الموقع:</th><td>{{ order.get_location_type_display }}</td><th>المدة التقديرية:</th><td>{% if order.estimated_duration %}{{ order.estimated_duration }} ساعة{% else %}-{% endif %}</td></tr>
-        {% if order.location_detail %}
-        <tr><th>تفاصيل الموقع:</th><td colspan="3">{{ order.location_detail }}</td></tr>
-        {% endif %}
-        {% if order.contact_name %}
-        <tr><th>جهة الاتصال:</th><td>{{ order.contact_name }}</td><th>الهاتف:</th><td>{{ order.contact_phone }}</td></tr>
-        {% endif %}
+        <tr>
+            <th>تكليف رقم:</th>
+            <td>{{ order.order_number }}</td>
+            <th>تاريخ الطلب:</th>
+            <td>{{ order.request_date|date:"Y/m/d" }}</td>
+        </tr>
+        <tr>
+            <th>رقم العقد:</th>
+            <td>{{ contract_number }}</td>
+            <th>الجهة الطالبة:</th>
+            <td>{{ order.prosecution.name }}</td>
+        </tr>
+        <tr>
+            <th>نوع الخدمة:</th>
+            <td>{{ order.get_service_type_display }}</td>
+            <th>المحقق:</th>
+            <td>{{ order.prosecutor_display }}</td>
+        </tr>
+        <tr>
+            <th>تاريخ ووقت التنفيذ:</th>
+            <td>{{ order.execution_date|date:"Y/m/d" }} {{ order.execution_time|time:"H:i" }}</td>
+            <th>مدة الانتهاء من التكليف:</th>
+            <td>{% if order.estimated_duration %}{{ order.estimated_duration }} ساعة{% else %}-{% endif %}</td>
+        </tr>
+        <tr>
+            <th>موقع تقديم الخدمة:</th>
+            <td>{{ order.get_location_type_display }}{% if order.location_detail %} - {{ order.location_detail }}{% endif %}</td>
+            <th>بيانات التواصل:</th>
+            <td>{% if order.contact_name %}{{ order.contact_name }}{% if order.contact_phone %} - {{ order.contact_phone }}{% endif %}{% else %}-{% endif %}</td>
+        </tr>
     </table>
 
+    <!-- Languages Table -->
     <table class="data">
         <thead>
             <tr>
-                <th>#</th>
-                <th>اللغة</th>
+                <th>م</th>
+                <th>اللغة المطلوبة</th>
                 <th>عدد المترجمين</th>
-                <th>{% if order.is_interpretation %}الساعات التقديرية{% else %}الصفحات التقديرية{% endif %}</th>
+                <th>{% if order.is_interpretation %}عدد الساعات{% else %}عدد الصفحات{% endif %}</th>
                 <th>سعر الوحدة (درهم)</th>
                 <th>المبلغ (درهم)</th>
             </tr>
@@ -73,7 +223,7 @@
         <tfoot>
             <tr>
                 <th colspan="5" style="text-align: right;">المجموع التقديري</th>
-                <th>{{ order.estimated_total|floatformat:2 }}</th>
+                <th>{{ order.estimated_total|floatformat:2 }} درهم</th>
             </tr>
         </tfoot>
     </table>
@@ -82,24 +232,30 @@
     <p><strong>ملاحظات:</strong> {{ order.notes }}</p>
     {% endif %}
 
-    <div class="signature-area">
-        <div class="signature-box">
-            <div class="signature-line">
-                <strong>مقدم الطلب</strong><br>
-                {{ order.created_by.get_full_name }}<br>
-                {% if order.submitted_at %}{{ order.submitted_at|date:"Y/m/d H:i" }}{% endif %}
+    <!-- Signatures -->
+    <div class="signature-section">
+        <h4>التوقيعات</h4>
+        <div class="sig-grid">
+            <div class="sig-box">
+                <div class="sig-label">اعتماد القسم الطالب</div>
+                <div class="sig-name">{{ order.created_by.get_full_name }}</div>
+                <div class="sig-line">
+                    التوقيع<br>
+                    {% if order.submitted_at %}{{ order.submitted_at|date:"Y/m/d H:i" }}{% endif %}
+                </div>
             </div>
-        </div>
-        <div class="signature-box">
-            <div class="signature-line">
-                <strong>مقدم الخدمة</strong><br>
-                سمارت وورلد للغات والتكنولوجيا
+            <div class="sig-box">
+                <div class="sig-label">مسؤول إدارة العقد</div>
+                <div class="sig-name">&nbsp;</div>
+                <div class="sig-line">
+                    التوقيع
+                </div>
             </div>
         </div>
     </div>
 
     <div class="contract-ref">
-        عقد رقم {{ contract_number }} | سمارت وورلد للغات والتكنولوجيا
+        عقد رقم {{ contract_number }} | سمارت وورلد للغات والتكنولوجيا | النيابة العامة الاتحادية
     </div>
 </body>
 </html>
