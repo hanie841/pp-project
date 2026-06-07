@@ -61,7 +61,7 @@ class WorkOrderLanguageForm(forms.ModelForm):
             'language': forms.Select(attrs={'class': 'form-select language-select'}),
             'custom_language_name': forms.TextInput(attrs={'class': 'form-control custom-lang-name', 'placeholder': 'اسم اللغة', 'style': 'display:none;'}),
             'num_translators': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'value': 1}),
-            'estimated_hours': forms.NumberInput(attrs={'class': 'form-control hours-field', 'step': '0.5', 'min': '0.5'}),
+            'estimated_hours': forms.NumberInput(attrs={'class': 'form-control hours-field', 'step': '1', 'min': '1'}),
             'estimated_pages': forms.NumberInput(attrs={'class': 'form-control pages-field', 'step': '1', 'min': '1'}),
         }
 
@@ -78,7 +78,7 @@ class ServiceRecordForm(forms.ModelForm):
         model = ServiceRecord
         fields = ['actual_hours', 'actual_pages', 'num_translators', 'notes']
         widgets = {
-            'actual_hours': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.5', 'min': '0.5'}),
+            'actual_hours': forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'min': '1'}),
             'actual_pages': forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'min': '1'}),
             'num_translators': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),

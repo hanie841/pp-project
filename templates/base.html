@@ -12,12 +12,29 @@
 </head>
 <body>
     {% if user.is_authenticated %}
+    <!-- Logo Header -->
+    <div class="bg-white border-bottom py-3">
+        <div class="container-fluid d-flex justify-content-between align-items-start" style="direction: ltr;">
+            <div class="text-center">
+                <img src="{% static 'images/pp_logo.png' %}" alt="النيابة العامة" style="height: 80px; display: block; margin: 0 auto 5px;">
+                <div style="font-size: 0.75rem; font-weight: bold; color: #8B7355; letter-spacing: 1px;">الـنـيـابـة الـعـامـة</div>
+                <div style="font-size: 0.65rem; color: #666;">PUBLIC PROSECUTION</div>
+            </div>
+            <div class="text-center" style="direction: rtl;">
+                <h5 class="mb-0" style="color: #8B7355;">بوابة خدمات الترجمة</h5>
+                <small class="text-muted">النيابة العامة الاتحادية</small>
+            </div>
+            <div class="text-center">
+                <img src="{% static 'images/uae_emblem.png' %}" alt="الإمارات العربية المتحدة" style="height: 80px; display: block; margin: 0 auto 5px;">
+                <div style="font-size: 0.75rem; font-weight: bold; color: #8B7355;">الإمارات العربية المتحدة</div>
+                <div style="font-size: 0.65rem; color: #666;">United Arab Emirates</div>
+            </div>
+        </div>
+    </div>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
-            <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'dashboard' %}">
-                <img src="{% static 'images/pp_logo.png' %}" alt="النيابة العامة" style="height: 28px;">
-                بوابة خدمات الترجمة
-                <img src="{% static 'images/uae_emblem.png' %}" alt="الإمارات" style="height: 28px;">
+            <a class="navbar-brand" href="{% url 'dashboard' %}">
+                القائمة
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>

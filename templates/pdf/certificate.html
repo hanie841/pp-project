@@ -262,7 +262,7 @@
             <div class="sig-box">
                 <div class="sig-label">اعتماد القسم الطالب</div>
                 <div class="sig-name">
-                    {% if order.approval.pp_approved_by %}{{ order.approval.pp_approved_by.get_full_name }}{% endif %}
+                    {{ order.prosecutor_display }}
                 </div>
                 <div class="sig-line">
                     التوقيع<br>

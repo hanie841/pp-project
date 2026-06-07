@@ -253,7 +253,7 @@
         <div class="sig-grid">
             <div class="sig-box">
                 <div class="sig-label">اعتماد القسم الطالب</div>
-                <div class="sig-name">{{ order.created_by.get_full_name }}</div>
+                <div class="sig-name">{{ order.prosecutor_display }}</div>
                 <div class="sig-line">
                     التوقيع<br>
                     {% if order.submitted_at %}{{ order.submitted_at|date:"Y/m/d H:i" }}{% endif %}

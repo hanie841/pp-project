@@ -124,9 +124,7 @@ class WorkOrder(models.Model):
         DISPUTED = 'DISPUTED', 'متنازع عليه'
 
     DURATION_CHOICES = [
-        (Decimal('0.5'), 'نصف ساعة'),
         (Decimal('1'), 'ساعة واحدة'),
-        (Decimal('1.5'), 'ساعة ونصف'),
         (Decimal('2'), 'ساعتان'),
         (Decimal('3'), '3 ساعات'),
         (Decimal('4'), '4 ساعات'),
