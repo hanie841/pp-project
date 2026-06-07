@@ -4,22 +4,6 @@ body {
     font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
 }
 
-/* Logo Bar */
-.logo-bar {
-    background: linear-gradient(to bottom, #fff, #f8f9fa);
-}
-
-.top-logo {
-    height: 55px;
-    width: auto;
-    object-fit: contain;
-}
-
-.logo-title {
-    color: #8B7355;
-    font-weight: bold;
-}
-
 /* Navbar */
 .navbar-brand {
     font-weight: bold;
@@ -120,13 +104,6 @@ input[type="checkbox"][name$="-DELETE"] {
         flex-direction: column;
     }
 
-    .top-logo {
-        height: 35px;
-    }
-
-    .logo-title {
-        font-size: 0.9rem;
-    }
 }
 
 /* Phone/LTR fields */
@@ -136,7 +113,7 @@ input[type="checkbox"][name$="-DELETE"] {
 
 /* Print styles */
 @media print {
-    .navbar, .logo-bar, footer, .btn, .alert-dismissible .btn-close {
+    .navbar, footer, .btn, .alert-dismissible .btn-close {
         display: none !important;
     }
 }
