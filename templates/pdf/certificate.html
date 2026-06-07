@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page { size: A4; margin: 2cm; }
+        body {
+            font-family: 'Arial', 'Tahoma', sans-serif;
+            font-size: 12pt;
+            direction: rtl;
+            text-align: right;
+            line-height: 1.8;
+        }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 3px solid #003366; padding-bottom: 15px; }
+        .header h2 { color: #003366; margin: 5px 0; }
+        .header h3 { color: #006633; margin: 5px 0; }
+        .info-section { margin-bottom: 15px; }
+        .info-row { display: flex; margin-bottom: 5px; }
+        .info-label { font-weight: bold; min-width: 150px; }
+        table.items { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        table.items th, table.items td { border: 1px solid #333; padding: 8px 12px; text-align: center; }
+        table.items th { background: #003366; color: white; }
+        table.items tfoot th, table.items tfoot td { font-weight: bold; }
+        .subtotal-row { background: #f0f0f0; }
+        .vat-row { background: #fff8e1; }
+        .total-row { background: #003366; color: white; font-size: 14pt; }
+        .signatures { margin-top: 50px; width: 100%; }
+        .sig-box { display: inline-block; width: 30%; text-align: center; vertical-align: top; }
+        .sig-line { border-top: 1px solid #333; margin-top: 70px; padding-top: 10px; }
+        .footer { font-size: 9pt; color: #888; text-align: center; margin-top: 30px; border-top: 1px solid #ccc; padding-top: 10px; }
+        .info-table { width: 100%; margin-bottom: 15px; }
+        .info-table td, .info-table th { padding: 4px 10px; }
+        .info-table th { background: #f5f5f5; width: 25%; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>النيابة العامة الاتحادية</h2>
+        <h2>سمارت وورلد للغات والتكنولوجيا</h2>
+        <h3>شهادة إنجاز</h3>
+        <p>Completion Certificate</p>
+    </div>
+
+    <table class="info-table">
+        <tr>
+            <th>رقم الشهادة:</th><td>{{ certificate.certificate_number }}</td>
+            <th>تاريخ الشهادة:</th><td>{{ certificate.certificate_date|date:"Y/m/d" }}</td>
+        </tr>
+        <tr>
+            <th>رقم أمر التكليف:</th><td>{{ order.order_number }}</td>
+            <th>رقم العقد:</th><td>{{ contract_number }}</td>
+        </tr>
+        <tr>
+            <th>رقم الفاتورة:</th><td>{{ certificate.invoice_number }}</td>
+            <th>تاريخ الفاتورة:</th><td>{{ certificate.invoice_date|date:"Y/m/d" }}</td>
+        </tr>
+        <tr>
+            <th>النيابة:</th><td>{{ order.prosecution.name }}</td>
+            <th>المحقق:</th><td>{{ order.prosecutor.name }}</td>
+        </tr>
+        <tr>
+            <th>نوع الخدمة:</th><td>{{ order.get_service_type_display }}</td>
+            <th>تاريخ التنفيذ:</th><td>{{ order.execution_date|date:"Y/m/d" }}</td>
+        </tr>
+    </table>
+
+    <table class="items">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>اللغة</th>
+                <th>عدد المترجمين</th>
+                <th>{% if order.is_interpretation %}الساعات{% else %}الصفحات{% endif %}</th>
+                <th>سعر الوحدة (درهم)</th>
+                <th>المبلغ (درهم)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in service_records %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ record.language.name_ar }}</td>
+                <td>{{ record.num_translators }}</td>
+                <td>{% if record.actual_hours %}{{ record.actual_hours }}{% else %}{{ record.actual_pages }}{% endif %}</td>
+                <td>{{ record.unit_rate|floatformat:2 }}</td>
+                <td>{{ record.amount|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="subtotal-row">
+                <th colspan="5" style="text-align: right;">المجموع الفرعي</th>
+                <td>{{ certificate.subtotal|floatformat:2 }}</td>
+            </tr>
+            <tr class="vat-row">
+                <th colspan="5" style="text-align: right;">ضريبة القيمة المضافة ({{ certificate.vat_rate }}%)</th>
+                <td>{{ certificate.vat_amount|floatformat:2 }}</td>
+            </tr>
+            <tr class="total-row">
+                <th colspan="5" style="text-align: right;">المجموع الكلي</th>
+                <td>{{ certificate.grand_total|floatformat:2 }}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="signatures">
+        <div class="sig-box">
+            <div class="sig-line">
+                <strong>مقدم الخدمة</strong><br>
+                سمارت وورلد للغات والتكنولوجيا<br>
+                {% if order.approval.smartworld_approved_by %}
+                {{ order.approval.smartworld_approved_by.get_full_name }}<br>
+                {{ order.approval.smartworld_approved_at|date:"Y/m/d" }}
+                {% endif %}
+            </div>
+        </div>
+        <div class="sig-box">
+            <div class="sig-line">
+                <strong>الجهة المستفيدة</strong><br>
+                النيابة العامة الاتحادية<br>
+                {% if order.approval.pp_approved_by %}
+                {{ order.approval.pp_approved_by.get_full_name }}<br>
+                {{ order.approval.pp_approved_at|date:"Y/m/d" }}
+                {% endif %}
+            </div>
+        </div>
+        <div class="sig-box">
+            <div class="sig-line">
+                <strong>مدير العقد</strong><br>
+                إدارة العقود
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        عقد رقم {{ contract_number }} | شهادة إنجاز رقم {{ certificate.certificate_number }} | فاتورة رقم {{ certificate.invoice_number }}
+    </div>
+</body>
+</html>

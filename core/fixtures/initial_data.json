@@ -1,0 +1,115 @@
+[
+  {
+    "model": "core.language",
+    "pk": 1,
+    "fields": {
+      "name_ar": "الإنجليزية",
+      "name_en": "English",
+      "hourly_rate": "300.00",
+      "page_rate": "90.00"
+    }
+  },
+  {
+    "model": "core.language",
+    "pk": 2,
+    "fields": {
+      "name_ar": "الأوردية",
+      "name_en": "Urdu",
+      "hourly_rate": "315.00",
+      "page_rate": "135.00"
+    }
+  },
+  {
+    "model": "core.language",
+    "pk": 3,
+    "fields": {
+      "name_ar": "الباشتو",
+      "name_en": "Pashto",
+      "hourly_rate": "340.00",
+      "page_rate": "135.00"
+    }
+  },
+  {
+    "model": "core.language",
+    "pk": 4,
+    "fields": {
+      "name_ar": "الفارسية",
+      "name_en": "Farsi",
+      "hourly_rate": "325.00",
+      "page_rate": "135.00"
+    }
+  },
+  {
+    "model": "core.language",
+    "pk": 5,
+    "fields": {
+      "name_ar": "أخرى",
+      "name_en": "Other",
+      "hourly_rate": "350.00",
+      "page_rate": "135.00"
+    }
+  },
+  {
+    "model": "core.prosecution",
+    "pk": 1,
+    "fields": {
+      "name": "النيابة العامة الاتحادية - أبوظبي",
+      "code": "PP-AUH",
+      "is_active": true
+    }
+  },
+  {
+    "model": "core.prosecution",
+    "pk": 2,
+    "fields": {
+      "name": "النيابة العامة الاتحادية - دبي",
+      "code": "PP-DXB",
+      "is_active": true
+    }
+  },
+  {
+    "model": "core.prosecution",
+    "pk": 3,
+    "fields": {
+      "name": "النيابة العامة الاتحادية - الشارقة",
+      "code": "PP-SHJ",
+      "is_active": true
+    }
+  },
+  {
+    "model": "core.prosecution",
+    "pk": 4,
+    "fields": {
+      "name": "النيابة العامة الاتحادية - عجمان",
+      "code": "PP-AJM",
+      "is_active": true
+    }
+  },
+  {
+    "model": "core.prosecution",
+    "pk": 5,
+    "fields": {
+      "name": "النيابة العامة الاتحادية - رأس الخيمة",
+      "code": "PP-RAK",
+      "is_active": true
+    }
+  },
+  {
+    "model": "core.prosecution",
+    "pk": 6,
+    "fields": {
+      "name": "النيابة العامة الاتحادية - الفجيرة",
+      "code": "PP-FUJ",
+      "is_active": true
+    }
+  },
+  {
+    "model": "core.prosecution",
+    "pk": 7,
+    "fields": {
+      "name": "النيابة العامة الاتحادية - أم القيوين",
+      "code": "PP-UAQ",
+      "is_active": true
+    }
+  }
+]

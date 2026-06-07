@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% load arabic_filters %}
+
+{% block title %}أمر تكليف جديد{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <h3 class="mb-4"><i class="bi bi-plus-circle"></i> أمر تكليف جديد</h3>
+
+        <form method="post" id="workOrderForm">
+            {% csrf_token %}
+
+            <div class="card mb-4">
+                <div class="card-header"><i class="bi bi-building"></i> معلومات النيابة</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_prosecution" class="form-label">النيابة *</label>
+                            {{ form.prosecution }}
+                            {% if form.prosecution.errors %}<div class="text-danger small">{{ form.prosecution.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_prosecutor" class="form-label">المحقق *</label>
+                            {{ form.prosecutor }}
+                            {% if form.prosecutor.errors %}<div class="text-danger small">{{ form.prosecutor.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header"><i class="bi bi-gear"></i> تفاصيل الخدمة</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="id_service_type" class="form-label">نوع الخدمة *</label>
+                            {{ form.service_type }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_execution_date" class="form-label">تاريخ التنفيذ *</label>
+                            {{ form.execution_date }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="id_execution_time" class="form-label">وقت التنفيذ *</label>
+                            {{ form.execution_time }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="id_estimated_duration" class="form-label">المدة التقديرية</label>
+                            {{ form.estimated_duration }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-translate"></i> اللغات</span>
+                    <button type="button" class="btn btn-sm btn-success" id="addLanguage">
+                        <i class="bi bi-plus"></i> إضافة لغة
+                    </button>
+                </div>
+                <div class="card-body">
+                    {{ formset.management_form }}
+                    <div id="languageForms">
+                        {% for lang_form in formset %}
+                        <div class="language-row border rounded p-3 mb-3">
+                            <div class="row align-items-end">
+                                <div class="col-md-3 mb-2">
+                                    <label class="form-label">اللغة *</label>
+                                    {{ lang_form.language }}
+                                </div>
+                                <div class="col-md-2 mb-2">
+                                    <label class="form-label">عدد المترجمين</label>
+                                    {{ lang_form.num_translators }}
+                                </div>
+                                <div class="col-md-2 mb-2 hours-group">
+                                    <label class="form-label">الساعات التقديرية</label>
+                                    {{ lang_form.estimated_hours }}
+                                </div>
+                                <div class="col-md-2 mb-2 pages-group">
+                                    <label class="form-label">الصفحات التقديرية</label>
+                                    {{ lang_form.estimated_pages }}
+                                </div>
+                                <div class="col-md-2 mb-2">
+                                    <label class="form-label">التكلفة التقديرية</label>
+                                    <div class="form-control-plaintext estimated-cost fw-bold text-primary">0.00 درهم</div>
+                                </div>
+                                <div class="col-md-1 mb-2">
+                                    {% if not forloop.first %}
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-language">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                    {{ lang_form.DELETE }}
+                                </div>
+                            </div>
+                            {% for hidden in lang_form.hidden_fields %}{{ hidden }}{% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-start mt-3 p-3 bg-light rounded">
+                        <h5>التكلفة التقديرية الإجمالية: <span id="totalEstimate" class="text-primary">0.00 درهم</span></h5>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header"><i class="bi bi-geo-alt"></i> الموقع والتواصل</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">نوع الموقع *</label>
+                        <div>
+                            {% for radio in form.location_type %}
+                            <div class="form-check form-check-inline">
+                                {{ radio }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_location_detail" class="form-label">تفاصيل الموقع</label>
+                        {{ form.location_detail }}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_contact_name" class="form-label">اسم جهة الاتصال</label>
+                            {{ form.contact_name }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_contact_phone" class="form-label">هاتف جهة الاتصال</label>
+                            {{ form.contact_phone }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_notes" class="form-label">ملاحظات</label>
+                        {{ form.notes }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                <strong>ملاحظة:</strong> بالضغط على "تقديم أمر التكليف" يعتبر ذلك توقيعاً رقمياً منكم على الطلب.
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-send"></i> تقديم أمر التكليف
+                </button>
+                <a href="{% url 'order_list' %}" class="btn btn-secondary btn-lg">إلغاء</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const RATE_DATA = {{ rate_data|to_json|safe }};
+</script>
+{% endblock %}

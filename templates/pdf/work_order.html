@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page { size: A4; margin: 2cm; }
+        body {
+            font-family: 'Arial', 'Tahoma', sans-serif;
+            font-size: 12pt;
+            direction: rtl;
+            text-align: right;
+            line-height: 1.8;
+        }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #003366; padding-bottom: 15px; }
+        .header h2 { color: #003366; margin: 5px 0; }
+        .header h3 { color: #666; margin: 5px 0; }
+        .info-table { width: 100%; margin-bottom: 15px; }
+        .info-table td { padding: 5px 10px; }
+        .info-table th { padding: 5px 10px; background: #f0f0f0; width: 30%; }
+        table.data { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        table.data th, table.data td { border: 1px solid #333; padding: 8px 10px; text-align: center; }
+        table.data th { background: #003366; color: white; }
+        table.data tfoot th { background: #e8e8e8; color: #333; }
+        .signature-area { margin-top: 40px; }
+        .signature-box { display: inline-block; width: 45%; text-align: center; vertical-align: top; }
+        .signature-line { border-top: 1px solid #333; margin-top: 60px; padding-top: 5px; }
+        .contract-ref { font-size: 10pt; color: #666; text-align: center; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>النيابة العامة الاتحادية</h2>
+        <h3>أمر تكليف</h3>
+        <p>Work Order</p>
+    </div>
+
+    <table class="info-table">
+        <tr><th>رقم أمر التكليف:</th><td>{{ order.order_number }}</td><th>تاريخ الطلب:</th><td>{{ order.request_date|date:"Y/m/d" }}</td></tr>
+        <tr><th>النيابة:</th><td>{{ order.prosecution.name }}</td><th>المحقق:</th><td>{{ order.prosecutor.name }}</td></tr>
+        <tr><th>نوع الخدمة:</th><td>{{ order.get_service_type_display }}</td><th>تاريخ التنفيذ:</th><td>{{ order.execution_date|date:"Y/m/d" }} {{ order.execution_time|time:"H:i" }}</td></tr>
+        <tr><th>نوع الموقع:</th><td>{{ order.get_location_type_display }}</td><th>المدة التقديرية:</th><td>{% if order.estimated_duration %}{{ order.estimated_duration }} ساعة{% else %}-{% endif %}</td></tr>
+        {% if order.location_detail %}
+        <tr><th>تفاصيل الموقع:</th><td colspan="3">{{ order.location_detail }}</td></tr>
+        {% endif %}
+        {% if order.contact_name %}
+        <tr><th>جهة الاتصال:</th><td>{{ order.contact_name }}</td><th>الهاتف:</th><td>{{ order.contact_phone }}</td></tr>
+        {% endif %}
+    </table>
+
+    <table class="data">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>اللغة</th>
+                <th>عدد المترجمين</th>
+                <th>{% if order.is_interpretation %}الساعات التقديرية{% else %}الصفحات التقديرية{% endif %}</th>
+                <th>سعر الوحدة (درهم)</th>
+                <th>المبلغ (درهم)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lang in lang_lines %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ lang.language.name_ar }}</td>
+                <td>{{ lang.num_translators }}</td>
+                <td>{% if lang.estimated_hours %}{{ lang.estimated_hours }}{% else %}{{ lang.estimated_pages }}{% endif %}</td>
+                <td>{% if lang.estimated_hours %}{{ lang.language.hourly_rate }}{% else %}{{ lang.language.page_rate }}{% endif %}</td>
+                <td>{{ lang.estimated_amount|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <th colspan="5" style="text-align: right;">المجموع التقديري</th>
+                <th>{{ order.estimated_total|floatformat:2 }}</th>
+            </tr>
+        </tfoot>
+    </table>
+
+    {% if order.notes %}
+    <p><strong>ملاحظات:</strong> {{ order.notes }}</p>
+    {% endif %}
+
+    <div class="signature-area">
+        <div class="signature-box">
+            <div class="signature-line">
+                <strong>مقدم الطلب</strong><br>
+                {{ order.created_by.get_full_name }}<br>
+                {% if order.submitted_at %}{{ order.submitted_at|date:"Y/m/d H:i" }}{% endif %}
+            </div>
+        </div>
+        <div class="signature-box">
+            <div class="signature-line">
+                <strong>مقدم الخدمة</strong><br>
+                سمارت وورلد للغات والتكنولوجيا
+            </div>
+        </div>
+    </div>
+
+    <div class="contract-ref">
+        عقد رقم {{ contract_number }} | سمارت وورلد للغات والتكنولوجيا
+    </div>
+</body>
+</html>

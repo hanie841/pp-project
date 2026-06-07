@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% load arabic_filters %}
+
+{% block title %}أمر تكليف {{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3><i class="bi bi-file-earmark-text"></i> أمر تكليف {{ order.order_number }}</h3>
+            <div class="d-flex gap-2">
+                <a href="{% url 'order_pdf' order.pk %}" class="btn btn-outline-secondary btn-sm" target="_blank">
+                    <i class="bi bi-file-pdf"></i> تصدير PDF
+                </a>
+                <a href="{% url 'order_list' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-right"></i> العودة
+                </a>
+            </div>
+        </div>
+
+        <!-- Status Timeline -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between text-center">
+                    {% with statuses="SUBMITTED,ACCEPTED,IN_PROGRESS,PENDING_APPROVAL,COMPLETED" %}
+                    {% for s in statuses|make_list %}
+                    {% endfor %}
+                    {% endwith %}
+                    <div class="flex-fill">
+                        <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center {% if order.status == 'SUBMITTED' or order.status == 'ACCEPTED' or order.status == 'IN_PROGRESS' or order.status == 'PENDING_APPROVAL' or order.status == 'COMPLETED' %}bg-success text-white{% else %}bg-light{% endif %}" style="width:40px;height:40px;">
+                            <i class="bi bi-send"></i>
+                        </div>
+                        <small>مقدم</small>
+                    </div>
+                    <div class="flex-fill">
+                        <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center {% if order.status == 'ACCEPTED' or order.status == 'IN_PROGRESS' or order.status == 'PENDING_APPROVAL' or order.status == 'COMPLETED' %}bg-success text-white{% else %}bg-light{% endif %}" style="width:40px;height:40px;">
+                            <i class="bi bi-check-lg"></i>
+                        </div>
+                        <small>مقبول</small>
+                    </div>
+                    <div class="flex-fill">
+                        <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center {% if order.status == 'PENDING_APPROVAL' or order.status == 'COMPLETED' %}bg-success text-white{% else %}bg-light{% endif %}" style="width:40px;height:40px;">
+                            <i class="bi bi-pencil-square"></i>
+                        </div>
+                        <small>تم التسجيل</small>
+                    </div>
+                    <div class="flex-fill">
+                        <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center {% if order.status == 'COMPLETED' %}bg-success text-white{% elif order.status == 'DISPUTED' %}bg-danger text-white{% else %}bg-light{% endif %}" style="width:40px;height:40px;">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <small>{% if order.status == 'DISPUTED' %}متنازع{% else %}مكتمل{% endif %}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">معلومات الطلب</div>
+                    <div class="card-body">
+                        <table class="table table-borderless">
+                            <tr><th>رقم الأمر:</th><td>{{ order.order_number }}</td></tr>
+                            <tr><th>تاريخ الطلب:</th><td>{{ order.request_date|date:"Y/m/d" }}</td></tr>
+                            <tr><th>النيابة:</th><td>{{ order.prosecution.name }}</td></tr>
+                            <tr><th>المحقق:</th><td>{{ order.prosecutor.name }}</td></tr>
+                            <tr><th>نوع الخدمة:</th><td>{{ order.get_service_type_display }}</td></tr>
+                            <tr><th>الحالة:</th><td><span class="badge bg-secondary">{{ order.get_status_display }}</span></td></tr>
+                            <tr><th>مقدم بواسطة:</th><td>{{ order.created_by.get_full_name }}</td></tr>
+                            {% if order.submitted_at %}
+                            <tr><th>تاريخ التقديم:</th><td>{{ order.submitted_at|date:"Y/m/d H:i" }}</td></tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">تفاصيل التنفيذ</div>
+                    <div class="card-body">
+                        <table class="table table-borderless">
+                            <tr><th>تاريخ التنفيذ:</th><td>{{ order.execution_date|date:"Y/m/d" }}</td></tr>
+                            <tr><th>وقت التنفيذ:</th><td>{{ order.execution_time|time:"H:i" }}</td></tr>
+                            {% if order.estimated_duration %}
+                            <tr><th>المدة التقديرية:</th><td>{{ order.estimated_duration }} ساعة</td></tr>
+                            {% endif %}
+                            <tr><th>نوع الموقع:</th><td>{{ order.get_location_type_display }}</td></tr>
+                            {% if order.location_detail %}
+                            <tr><th>تفاصيل الموقع:</th><td>{{ order.location_detail }}</td></tr>
+                            {% endif %}
+                            {% if order.contact_name %}
+                            <tr><th>جهة الاتصال:</th><td>{{ order.contact_name }}</td></tr>
+                            {% endif %}
+                            {% if order.contact_phone %}
+                            <tr><th>الهاتف:</th><td dir="ltr">{{ order.contact_phone }}</td></tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Languages -->
+        <div class="card mb-4">
+            <div class="card-header">اللغات والتكلفة التقديرية</div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>اللغة</th>
+                            <th>عدد المترجمين</th>
+                            <th>{% if order.is_interpretation %}الساعات{% else %}الصفحات{% endif %}</th>
+                            <th>سعر الوحدة</th>
+                            <th>المبلغ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lang in order.languages.all %}
+                        <tr>
+                            <td>{{ lang.language.name_ar }}</td>
+                            <td>{{ lang.num_translators }}</td>
+                            <td>{% if lang.estimated_hours %}{{ lang.estimated_hours }}{% else %}{{ lang.estimated_pages }}{% endif %}</td>
+                            <td>{% if lang.estimated_hours %}{{ lang.language.hourly_rate }}{% else %}{{ lang.language.page_rate }}{% endif %} درهم</td>
+                            <td>{{ lang.estimated_amount|currency }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-dark">
+                        <tr>
+                            <th colspan="4">المجموع التقديري</th>
+                            <th>{{ order.estimated_total|currency }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        {% if order.notes %}
+        <div class="card mb-4">
+            <div class="card-header">ملاحظات</div>
+            <div class="card-body">{{ order.notes }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Service Records (if any) -->
+        {% if order.service_records.count > 0 %}
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">سجل الخدمة الفعلية</div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>اللغة</th>
+                            <th>عدد المترجمين</th>
+                            <th>{% if order.is_interpretation %}الساعات الفعلية{% else %}الصفحات الفعلية{% endif %}</th>
+                            <th>سعر الوحدة</th>
+                            <th>المبلغ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in order.service_records.all %}
+                        <tr>
+                            <td>{{ record.language.name_ar }}</td>
+                            <td>{{ record.num_translators }}</td>
+                            <td>{% if record.actual_hours %}{{ record.actual_hours }}{% else %}{{ record.actual_pages }}{% endif %}</td>
+                            <td>{{ record.unit_rate }} درهم</td>
+                            <td>{{ record.amount|currency }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Dispute info -->
+        {% if order.status == 'DISPUTED' and order.approval.pp_dispute_reason %}
+        <div class="alert alert-danger">
+            <h6><i class="bi bi-exclamation-triangle"></i> سبب الاعتراض:</h6>
+            <p class="mb-0">{{ order.approval.pp_dispute_reason }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Action Buttons -->
+        <div class="d-flex gap-2 mt-4">
+            {% if profile and profile.is_smartworld and order.status == 'SUBMITTED' %}
+            <form method="post" action="{% url 'order_accept' order.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="bi bi-check-circle"></i> قبول أمر التكليف
+                </button>
+            </form>
+            {% endif %}
+
+            {% if profile and profile.is_smartworld and order.status == 'ACCEPTED' %}
+            <a href="{% url 'order_log_service' order.pk %}" class="btn btn-primary btn-lg">
+                <i class="bi bi-pencil-square"></i> تسجيل الخدمة الفعلية
+                </a>
+            {% endif %}
+
+            {% if profile and profile.is_pp_staff and order.status == 'PENDING_APPROVAL' %}
+            <a href="{% url 'order_approve' order.pk %}" class="btn btn-warning btn-lg">
+                <i class="bi bi-clipboard-check"></i> مراجعة واعتماد
+            </a>
+            {% endif %}
+
+            {% if order.status == 'COMPLETED' %}
+            <a href="{% url 'order_certificate' order.pk %}" class="btn btn-success btn-lg">
+                <i class="bi bi-award"></i> شهادة الإنجاز
+            </a>
+            {% endif %}
+
+            {% if profile and profile.is_smartworld and order.status == 'DISPUTED' %}
+            <a href="{% url 'order_log_service' order.pk %}" class="btn btn-warning btn-lg">
+                <i class="bi bi-arrow-repeat"></i> إعادة تسجيل الخدمة
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Meeting Link Form -->
+        {% if meeting_link_form %}
+        <div class="card mt-4">
+            <div class="card-header bg-info text-white">
+                <i class="bi bi-link-45deg"></i> توفير رابط الاجتماع
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'order_provide_link' order.pk %}">
+                    {% csrf_token %}
+                    <div class="input-group">
+                        {{ meeting_link_form.meeting_link }}
+                        <button type="submit" class="btn btn-info">
+                            <i class="bi bi-send"></i> إرسال
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

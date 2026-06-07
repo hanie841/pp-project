@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% load arabic_filters %}
+
+{% block title %}لوحة التحكم - بوابة خدمات الترجمة{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <h3 class="mb-4"><i class="bi bi-speedometer2"></i> لوحة التحكم</h3>
+
+        <!-- Contract Balance Bar -->
+        <div class="card mb-4 border-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0">ميزانية العقد</h6>
+                    <span class="badge bg-primary fs-6">{{ total_invoiced|currency }} / {{ contract_total|currency }}</span>
+                </div>
+                <div class="progress" style="height: 25px;">
+                    <div class="progress-bar {% if usage_percent > 80 %}bg-danger{% elif usage_percent > 60 %}bg-warning{% else %}bg-success{% endif %}"
+                         role="progressbar" style="width: {{ usage_percent }}%"
+                         aria-valuenow="{{ usage_percent }}" aria-valuemin="0" aria-valuemax="100">
+                        {{ usage_percent }}%
+                    </div>
+                </div>
+                <small class="text-muted mt-1 d-block">المتبقي: {{ remaining|currency }}</small>
+            </div>
+        </div>
+
+        <div class="row">
+            {% if profile and profile.is_pp_staff %}
+            <!-- PP Staff Dashboard -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <i class="bi bi-file-earmark-text"></i> أوامر التكليف الخاصة بي
+                    </div>
+                    <div class="card-body">
+                        {% if my_orders %}
+                        <div class="list-group list-group-flush">
+                            {% for order in my_orders %}
+                            <a href="{% url 'order_detail' order.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ order.order_number }}</strong>
+                                    <br><small class="text-muted">{{ order.get_service_type_display }} - {{ order.execution_date }}</small>
+                                </div>
+                                <span class="badge bg-{{ order.status|lower }} rounded-pill status-badge">{{ order.get_status_display }}</span>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center py-3">لا توجد أوامر تكليف</p>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer">
+                        <a href="{% url 'order_create' %}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus-circle"></i> أمر تكليف جديد
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <i class="bi bi-clock"></i> بانتظار اعتمادي
+                    </div>
+                    <div class="card-body">
+                        {% if pending_approval %}
+                        <div class="list-group list-group-flush">
+                            {% for order in pending_approval %}
+                            <a href="{% url 'order_approve' order.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ order.order_number }}</strong>
+                                    <br><small class="text-muted">{{ order.get_service_type_display }}</small>
+                                </div>
+                                <span class="badge bg-warning text-dark rounded-pill">بانتظار الاعتماد</span>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center py-3">لا توجد أوامر بانتظار الاعتماد</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% elif profile and profile.is_smartworld %}
+            <!-- SmartWorld Staff Dashboard -->
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-info text-white">
+                        <i class="bi bi-inbox"></i> أوامر واردة
+                    </div>
+                    <div class="card-body">
+                        {% if incoming_orders %}
+                        <div class="list-group list-group-flush">
+                            {% for order in incoming_orders %}
+                            <a href="{% url 'order_detail' order.pk %}" class="list-group-item list-group-item-action">
+                                <strong>{{ order.order_number }}</strong>
+                                <br><small>{{ order.prosecution.name }} - {{ order.get_service_type_display }}</small>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center py-3">لا توجد أوامر واردة</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-success text-white">
+                        <i class="bi bi-pencil-square"></i> تسجيل الخدمة
+                    </div>
+                    <div class="card-body">
+                        {% if to_log %}
+                        <div class="list-group list-group-flush">
+                            {% for order in to_log %}
+                            <a href="{% url 'order_log_service' order.pk %}" class="list-group-item list-group-item-action">
+                                <strong>{{ order.order_number }}</strong>
+                                <br><small>{{ order.prosecution.name }}</small>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center py-3">لا توجد أوامر لتسجيل الخدمة</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <i class="bi bi-hourglass-split"></i> بانتظار الاعتماد
+                    </div>
+                    <div class="card-body">
+                        {% if pending_approvals %}
+                        <div class="list-group list-group-flush">
+                            {% for order in pending_approvals %}
+                            <a href="{% url 'order_detail' order.pk %}" class="list-group-item list-group-item-action">
+                                <strong>{{ order.order_number }}</strong>
+                                <br><small>{{ order.prosecution.name }}</small>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center py-3">لا توجد أوامر بانتظار الاعتماد</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% elif profile and profile.is_contract_manager %}
+            <!-- Contract Manager Dashboard -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-dark text-white">
+                        <i class="bi bi-list-check"></i> جميع أوامر التكليف
+                    </div>
+                    <div class="card-body">
+                        {% if all_orders %}
+                        <div class="list-group list-group-flush">
+                            {% for order in all_orders %}
+                            <a href="{% url 'order_detail' order.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between">
+                                <div>
+                                    <strong>{{ order.order_number }}</strong>
+                                    <br><small>{{ order.prosecution.name }}</small>
+                                </div>
+                                <span class="badge bg-secondary rounded-pill">{{ order.get_status_display }}</span>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center py-3">لا توجد أوامر</p>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer">
+                        <a href="{% url 'order_list' %}" class="btn btn-dark btn-sm">عرض الكل</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <i class="bi bi-hourglass-split"></i> بانتظار الاعتماد
+                    </div>
+                    <div class="card-body">
+                        {% if pending_approvals %}
+                        <div class="list-group list-group-flush">
+                            {% for order in pending_approvals %}
+                            <a href="{% url 'order_detail' order.pk %}" class="list-group-item list-group-item-action">
+                                <strong>{{ order.order_number }}</strong> - {{ order.prosecution.name }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center py-3">لا توجد أوامر بانتظار الاعتماد</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-activity"></i> النشاط الأخير
+            </div>
+            <div class="card-body">
+                {% if recent_activity %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>رقم الأمر</th>
+                                <th>النيابة</th>
+                                <th>نوع الخدمة</th>
+                                <th>الحالة</th>
+                                <th>آخر تحديث</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in recent_activity %}
+                            <tr>
+                                <td><a href="{% url 'order_detail' order.pk %}">{{ order.order_number }}</a></td>
+                                <td>{{ order.prosecution.name }}</td>
+                                <td>{{ order.get_service_type_display }}</td>
+                                <td><span class="badge bg-secondary">{{ order.get_status_display }}</span></td>
+                                <td>{{ order.updated_at|date:"Y/m/d H:i" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">لا يوجد نشاط حديث</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,109 @@
+/* PP Translation Services Portal - Custom RTL Styles */
+
+body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+}
+
+/* Navbar */
+.navbar-brand {
+    font-weight: bold;
+}
+
+/* Cards */
+.card-header {
+    font-weight: bold;
+}
+
+/* Status badge colors */
+.badge {
+    font-size: 0.85em;
+}
+
+/* Progress bar */
+.progress {
+    border-radius: 12px;
+}
+
+.progress-bar {
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+/* Forms */
+.form-label {
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #003366;
+    box-shadow: 0 0 0 0.2rem rgba(0, 51, 102, 0.15);
+}
+
+/* Language rows */
+.language-row {
+    background: #fafafa;
+    transition: background 0.2s;
+}
+
+.language-row:hover {
+    background: #f0f4ff;
+}
+
+/* Tables */
+.table th {
+    white-space: nowrap;
+}
+
+/* Login page */
+.min-vh-100 {
+    min-height: 100vh;
+}
+
+/* Timeline */
+.rounded-circle {
+    transition: all 0.3s;
+}
+
+/* Footer */
+footer {
+    font-size: 0.85em;
+}
+
+/* Alert styles */
+.alert-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.9em;
+}
+
+/* Delete checkbox hidden */
+input[type="checkbox"][name$="-DELETE"] {
+    display: none;
+}
+
+/* Responsive fixes */
+@media (max-width: 768px) {
+    .signature-box, .sig-box {
+        display: block;
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
+    .d-flex.gap-2 {
+        flex-direction: column;
+    }
+}
+
+/* Phone/LTR fields */
+[dir="ltr"] {
+    text-align: left;
+}
+
+/* Print styles */
+@media print {
+    .navbar, footer, .btn, .alert-dismissible .btn-close {
+        display: none !important;
+    }
+}

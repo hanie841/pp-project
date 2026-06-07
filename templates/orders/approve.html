@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% load arabic_filters %}
+
+{% block title %}اعتماد أمر التكليف - {{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <h3 class="mb-4"><i class="bi bi-clipboard-check"></i> اعتماد أمر التكليف - {{ order.order_number }}</h3>
+
+        <div class="alert alert-info">
+            <strong>النيابة:</strong> {{ order.prosecution.name }} |
+            <strong>نوع الخدمة:</strong> {{ order.get_service_type_display }} |
+            <strong>تاريخ التنفيذ:</strong> {{ order.execution_date|date:"Y/m/d" }}
+        </div>
+
+        <!-- Comparison Table -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-arrow-left-right"></i> مقارنة التقديري بالفعلي
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-bordered mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>اللغة</th>
+                            <th>المترجمون</th>
+                            <th>{% if order.is_interpretation %}الساعات{% else %}الصفحات{% endif %} (تقديري)</th>
+                            <th>{% if order.is_interpretation %}الساعات{% else %}الصفحات{% endif %} (فعلي)</th>
+                            <th>المبلغ التقديري</th>
+                            <th>المبلغ الفعلي</th>
+                            <th>الفرق</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lang_line in lang_lines %}
+                        {% for record in service_records %}
+                        {% if record.language_id == lang_line.language_id %}
+                        <tr>
+                            <td>{{ lang_line.language.name_ar }}</td>
+                            <td>
+                                {{ lang_line.num_translators }} &rarr; {{ record.num_translators }}
+                            </td>
+                            <td>{% if lang_line.estimated_hours %}{{ lang_line.estimated_hours }}{% else %}{{ lang_line.estimated_pages }}{% endif %}</td>
+                            <td>
+                                {% if record.actual_hours %}{{ record.actual_hours }}{% else %}{{ record.actual_pages }}{% endif %}
+                                {% if lang_line.estimated_hours and record.actual_hours and record.actual_hours != lang_line.estimated_hours %}
+                                    {% if record.actual_hours > lang_line.estimated_hours %}
+                                    <span class="badge bg-danger">زيادة</span>
+                                    {% else %}
+                                    <span class="badge bg-success">أقل</span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>{{ lang_line.estimated_amount|currency }}</td>
+                            <td>{{ record.amount|currency }}</td>
+                            {% with diff=record.amount|add:lang_line.estimated_amount|default:0 %}
+                            <td>
+                                {% if record.amount > lang_line.estimated_amount %}
+                                <span class="text-danger">+</span>
+                                {% elif record.amount < lang_line.estimated_amount %}
+                                <span class="text-success">-</span>
+                                {% else %}
+                                <span class="text-muted">=</span>
+                                {% endif %}
+                            </td>
+                            {% endwith %}
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% for record in service_records %}
+        {% if record.notes %}
+        <div class="alert alert-secondary">
+            <strong>ملاحظات ({{ record.language.name_ar }}):</strong> {{ record.notes }}
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        <!-- Approval Form -->
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="row mt-4">
+                <div class="col-md-6 mb-3">
+                    <div class="card border-success h-100">
+                        <div class="card-body text-center">
+                            <h5 class="text-success"><i class="bi bi-check-circle"></i> اعتماد</h5>
+                            <p class="text-muted">أوافق على الخدمة الفعلية المقدمة</p>
+                            <button type="submit" name="action" value="approve" class="btn btn-success btn-lg w-100">
+                                <i class="bi bi-check-lg"></i> اعتماد أمر التكليف
+                            </button>
+                            <small class="text-muted d-block mt-2">يعتبر ذلك توقيعاً رقمياً</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card border-danger h-100">
+                        <div class="card-body">
+                            <h5 class="text-danger text-center"><i class="bi bi-x-circle"></i> اعتراض</h5>
+                            <div class="mb-3">
+                                <label class="form-label">سبب الاعتراض *</label>
+                                {{ dispute_form.reason }}
+                            </div>
+                            <button type="submit" name="action" value="dispute" class="btn btn-danger w-100">
+                                <i class="bi bi-x-lg"></i> اعتراض
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="mt-3">
+            <a href="{% url 'order_detail' order.pk %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-right"></i> العودة
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
