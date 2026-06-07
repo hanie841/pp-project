@@ -1,86 +1,42 @@
 /* ============================================
    PP Translation Services Portal
-   Official Government Design System
-   Color Palette:
-     Navy:   #1B2A4A
-     Gold:   #C9A96E
-     Accent: #8B7355
-     Light:  #F4F6F9
+   Official Government Theme
+   Navy:  #1B2A4A  |  Gold: #C9A96E
    ============================================ */
 
 :root {
     --navy: #1B2A4A;
     --navy-light: #243656;
     --gold: #C9A96E;
-    --gold-light: #D4B87A;
     --gold-dark: #8B7355;
-    --bg-light: #F4F6F9;
-    --card-shadow: 0 2px 12px rgba(27, 42, 74, 0.08);
-    --card-shadow-hover: 0 4px 20px rgba(27, 42, 74, 0.14);
 }
 
 body {
     font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-    background: var(--bg-light);
-    color: #333;
+    background: #F4F6F9;
 }
 
 /* ---- Logo Header ---- */
 .logo-header {
     background: white;
     border-bottom: 3px solid var(--gold);
-    padding: 1rem 0;
-}
-.logo-block {
-    text-align: center;
-}
-.logo-block img {
-    height: 80px;
-    display: block;
-    margin: 0 auto 5px;
-}
-.logo-text-ar {
-    font-size: 0.75rem;
-    font-weight: bold;
-    color: var(--gold-dark);
-    letter-spacing: 1px;
-    margin: 0;
-}
-.logo-text-en {
-    font-size: 0.65rem;
-    color: #888;
-    margin: 0;
-}
-.portal-title {
-    color: var(--navy);
-    font-weight: bold;
-    font-size: 1.2rem;
-    margin: 0;
-}
-.portal-subtitle {
-    color: var(--gold-dark);
-    font-size: 0.8rem;
-    margin: 0;
 }
 
 /* ---- Navbar ---- */
 .navbar-gov {
-    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+    background: var(--navy);
     border-bottom: 2px solid var(--gold);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    padding: 0.4rem 0;
 }
 .navbar-gov .nav-link {
     color: rgba(255,255,255,0.85) !important;
     font-size: 0.9rem;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    transition: all 0.2s;
+    padding: 0.5rem 0.8rem;
+    border-radius: 4px;
+    transition: background 0.2s;
 }
-.navbar-gov .nav-link:hover,
-.navbar-gov .nav-link.active {
+.navbar-gov .nav-link:hover {
+    background: rgba(255,255,255,0.1);
     color: #fff !important;
-    background: rgba(201, 169, 110, 0.2);
 }
 .navbar-gov .nav-link i {
     color: var(--gold);
@@ -88,322 +44,9 @@ body {
 .navbar-gov .navbar-brand {
     color: var(--gold) !important;
     font-weight: bold;
-    font-size: 0.95rem;
 }
-
-/* ---- Cards ---- */
-.card {
-    border: none;
-    border-radius: 10px;
-    box-shadow: var(--card-shadow);
-    transition: box-shadow 0.3s;
-    overflow: hidden;
-}
-.card:hover {
-    box-shadow: var(--card-shadow-hover);
-}
-.card-header {
-    font-weight: bold;
-    font-size: 0.95rem;
-    border-bottom: 1px solid #eee;
-}
-.card-header-navy {
-    background: var(--navy) !important;
-    color: white !important;
-    border: none;
-}
-.card-header-navy i {
-    color: var(--gold);
-}
-.card-header-gold {
-    background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%) !important;
-    color: white !important;
-    border: none;
-}
-.card-accent {
-    border-top: 3px solid var(--gold);
-}
-
-/* ---- Stat Cards ---- */
-.stat-card {
-    border: none;
-    border-radius: 10px;
-    box-shadow: var(--card-shadow);
-    padding: 1.2rem;
-    text-align: center;
-    transition: transform 0.2s, box-shadow 0.3s;
-    position: relative;
-    overflow: hidden;
-}
-.stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--card-shadow-hover);
-}
-.stat-card .stat-icon {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-}
-.stat-card .stat-number {
-    font-size: 1.8rem;
-    font-weight: 800;
-    line-height: 1;
-}
-.stat-card .stat-label {
-    font-size: 0.8rem;
-    color: #666;
-    margin-top: 0.3rem;
-}
-.stat-card-navy {
-    background: linear-gradient(135deg, var(--navy), var(--navy-light));
-    color: white;
-}
-.stat-card-navy .stat-label { color: rgba(255,255,255,0.7); }
-.stat-card-navy .stat-icon { color: var(--gold); }
-.stat-card-gold {
-    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
-    color: white;
-}
-.stat-card-gold .stat-label { color: rgba(255,255,255,0.8); }
-.stat-card-success {
-    background: white;
-    border-right: 4px solid #1B7A43;
-}
-.stat-card-success .stat-icon { color: #1B7A43; }
-.stat-card-success .stat-number { color: #1B7A43; }
-.stat-card-warning {
-    background: white;
-    border-right: 4px solid #F9A825;
-}
-.stat-card-warning .stat-icon { color: #F9A825; }
-.stat-card-warning .stat-number { color: #F9A825; }
-.stat-card-info {
-    background: white;
-    border-right: 4px solid #1565C0;
-}
-.stat-card-info .stat-icon { color: #1565C0; }
-.stat-card-info .stat-number { color: #1565C0; }
-
-/* ---- Budget Progress ---- */
-.budget-card {
-    border-top: 3px solid var(--gold);
-    background: white;
-}
-.budget-card .progress {
-    height: 28px;
-    border-radius: 14px;
-    background: #e9ecef;
-}
-.budget-card .progress-bar {
-    border-radius: 14px;
-    font-weight: bold;
-    font-size: 0.85em;
-}
-
-/* ---- Tables ---- */
-.table-gov thead {
-    background: var(--navy);
-    color: white;
-}
-.table-gov thead th {
-    font-weight: 600;
-    font-size: 0.9rem;
-    padding: 0.75rem;
-    white-space: nowrap;
-    border: none;
-}
-.table-gov tbody tr {
-    transition: background 0.15s;
-}
-.table-gov tbody tr:hover {
-    background: rgba(201, 169, 110, 0.08);
-}
-.table-gov tfoot {
-    background: var(--navy);
-    color: white;
-}
-
-/* ---- Status Badges ---- */
-.badge {
-    font-size: 0.8em;
-    padding: 0.4em 0.8em;
-    border-radius: 20px;
-    font-weight: 600;
-}
-.badge-draft { background: #78909C; color: white; }
-.badge-submitted { background: #1565C0; color: white; }
-.badge-accepted { background: #00838F; color: white; }
-.badge-in_progress { background: var(--gold-dark); color: white; }
-.badge-pending_approval { background: #F9A825; color: #333; }
-.badge-completed { background: #1B7A43; color: white; }
-.badge-disputed { background: #C62828; color: white; }
-
-/* ---- Timeline ---- */
-.timeline-step {
-    text-align: center;
-    flex: 1;
-    position: relative;
-}
-.timeline-step::before {
-    content: '';
-    position: absolute;
-    top: 20px;
-    right: 50%;
-    width: 100%;
-    height: 2px;
-    background: #ddd;
-    z-index: 0;
-}
-.timeline-step:first-child::before {
-    display: none;
-}
-.timeline-dot {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 6px;
-    position: relative;
-    z-index: 1;
-    font-size: 1rem;
-    transition: all 0.3s;
-}
-.timeline-dot-done {
-    background: var(--navy);
-    color: var(--gold);
-    box-shadow: 0 2px 8px rgba(27, 42, 74, 0.3);
-}
-.timeline-dot-current {
-    background: var(--gold);
-    color: white;
-    box-shadow: 0 2px 12px rgba(201, 169, 110, 0.5);
-    animation: pulse 2s infinite;
-}
-.timeline-dot-pending {
-    background: #e9ecef;
-    color: #aaa;
-}
-.timeline-dot-error {
-    background: #C62828;
-    color: white;
-}
-.timeline-label {
-    font-size: 0.75rem;
-    color: #666;
-    font-weight: 600;
-}
-
-@keyframes pulse {
-    0%, 100% { box-shadow: 0 2px 12px rgba(201, 169, 110, 0.5); }
-    50% { box-shadow: 0 2px 20px rgba(201, 169, 110, 0.8); }
-}
-
-/* ---- List Group ---- */
-.list-group-item {
-    border-color: #f0f0f0;
-    transition: background 0.15s;
-}
-.list-group-item:hover {
-    background: rgba(201, 169, 110, 0.06);
-}
-
-/* ---- Buttons ---- */
-.btn-navy {
-    background: var(--navy);
-    color: white;
-    border: none;
-}
-.btn-navy:hover {
-    background: var(--navy-light);
-    color: white;
-}
-.btn-gold {
-    background: var(--gold);
-    color: white;
-    border: none;
-}
-.btn-gold:hover {
-    background: var(--gold-light);
-    color: white;
-}
-.btn-outline-gold {
-    border: 1px solid var(--gold);
-    color: var(--gold-dark);
-}
-.btn-outline-gold:hover {
-    background: var(--gold);
-    color: white;
-}
-
-/* ---- Status Filter Buttons ---- */
-.filter-btn {
-    border: 1px solid #ddd;
-    background: white;
-    color: #555;
-    border-radius: 20px;
-    padding: 0.3rem 0.9rem;
-    font-size: 0.85rem;
-    transition: all 0.2s;
-}
-.filter-btn:hover, .filter-btn.active {
-    background: var(--navy);
-    color: white;
-    border-color: var(--navy);
-}
-
-/* ---- Forms ---- */
-.form-label {
-    font-weight: 600;
-    margin-bottom: 0.3rem;
-    color: var(--navy);
-}
-.form-control:focus,
-.form-select:focus {
-    border-color: var(--gold);
-    box-shadow: 0 0 0 0.2rem rgba(201, 169, 110, 0.2);
-}
-
-/* ---- Section Title ---- */
-.section-title {
-    color: var(--navy);
-    font-size: 1.1rem;
-    font-weight: bold;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid var(--gold);
-    margin-bottom: 1rem;
-}
-
-/* ---- Signature ---- */
-.signature-display {
-    font-family: 'Georgia', 'Times New Roman', serif;
-    font-size: 1.5em;
-    font-style: italic;
-    color: var(--navy);
-    padding: 5px 0;
-}
-
-/* ---- Footer ---- */
-.footer-gov {
-    background: var(--navy);
-    color: rgba(255,255,255,0.7);
-    padding: 1rem 0;
-    font-size: 0.8rem;
-    border-top: 3px solid var(--gold);
-}
-.footer-gov a {
-    color: var(--gold);
-    text-decoration: none;
-}
-
-/* ---- Language rows ---- */
-.language-row {
-    background: #fafafa;
-    transition: background 0.2s;
-    border-radius: 8px;
-}
-.language-row:hover {
-    background: rgba(201, 169, 110, 0.06);
+.navbar-gov .user-name {
+    color: var(--gold) !important;
 }
 
 /* ---- Page Header ---- */
@@ -412,7 +55,7 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
+    padding-bottom: 0.8rem;
     border-bottom: 2px solid var(--gold);
 }
 .page-header h3 {
@@ -424,44 +67,187 @@ body {
     color: var(--gold);
 }
 
+/* ---- Cards ---- */
+.card {
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+}
+.card-accent {
+    border-top: 3px solid var(--gold);
+}
+.card-header {
+    font-weight: bold;
+}
+.card-header-navy {
+    background: var(--navy) !important;
+    color: white !important;
+}
+.card-header-navy i { color: var(--gold); }
+.card-header-gold {
+    background: var(--gold-dark) !important;
+    color: white !important;
+}
+
+/* ---- Stat Cards ---- */
+.stat-card {
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    border: 1px solid #e8e8e8;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    transition: transform 0.2s;
+}
+.stat-card:hover { transform: translateY(-2px); }
+.stat-card .stat-icon { font-size: 1.8rem; margin-bottom: 0.4rem; }
+.stat-card .stat-number { font-size: 1.6rem; font-weight: 800; }
+.stat-card .stat-label { font-size: 0.78rem; color: #777; margin-top: 0.2rem; }
+
+.stat-card-navy { background: var(--navy); color: white; border: none; }
+.stat-card-navy .stat-label { color: rgba(255,255,255,0.7); }
+.stat-card-navy .stat-icon { color: var(--gold); }
+.stat-card-gold { background: var(--gold-dark); color: white; border: none; }
+.stat-card-gold .stat-label { color: rgba(255,255,255,0.8); }
+.stat-card-success { border-right: 4px solid #198754; }
+.stat-card-success .stat-icon, .stat-card-success .stat-number { color: #198754; }
+.stat-card-warning { border-right: 4px solid #ffc107; }
+.stat-card-warning .stat-icon, .stat-card-warning .stat-number { color: #e6a800; }
+.stat-card-info { border-right: 4px solid #0d6efd; }
+.stat-card-info .stat-icon, .stat-card-info .stat-number { color: #0d6efd; }
+
+/* ---- Budget ---- */
+.progress { border-radius: 12px; }
+.progress-bar { border-radius: 12px; font-weight: bold; font-size: 0.9em; }
+
+/* ---- Tables ---- */
+.table-gov thead {
+    background: var(--navy) !important;
+    color: white !important;
+}
+.table-gov thead th {
+    background: var(--navy) !important;
+    color: white !important;
+    font-weight: 600;
+    white-space: nowrap;
+    border: none;
+}
+.table-gov tbody tr:hover {
+    background: rgba(201, 169, 110, 0.06);
+}
+.table-gov tfoot {
+    background: var(--navy);
+    color: white;
+}
+.table-gov tfoot th, .table-gov tfoot td {
+    background: var(--navy) !important;
+    color: white !important;
+}
+.table th { white-space: nowrap; }
+
+/* ---- Badges ---- */
+.badge { font-size: 0.82em; padding: 0.35em 0.7em; border-radius: 12px; }
+.badge-draft { background: #6c757d; }
+.badge-submitted { background: #0d6efd; }
+.badge-accepted { background: #0dcaf0; color: #000; }
+.badge-in_progress { background: var(--gold-dark); }
+.badge-pending_approval { background: #ffc107; color: #000; }
+.badge-completed { background: #198754; }
+.badge-disputed { background: #dc3545; }
+
+/* ---- Timeline ---- */
+.timeline-step { text-align: center; flex: 1; position: relative; }
+.timeline-step::before {
+    content: ''; position: absolute; top: 20px; right: 50%;
+    width: 100%; height: 2px; background: #ddd; z-index: 0;
+}
+.timeline-step:first-child::before { display: none; }
+.timeline-dot {
+    width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 6px; position: relative; z-index: 1;
+    font-size: 1rem; transition: all 0.3s;
+}
+.timeline-dot-done { background: var(--navy); color: var(--gold); }
+.timeline-dot-current { background: var(--gold); color: white; box-shadow: 0 0 12px rgba(201,169,110,0.5); }
+.timeline-dot-pending { background: #e9ecef; color: #aaa; }
+.timeline-dot-error { background: #dc3545; color: white; }
+.timeline-label { font-size: 0.75rem; color: #666; font-weight: 600; }
+
+/* ---- Buttons ---- */
+.btn-navy { background: var(--navy); color: white; border: none; }
+.btn-navy:hover { background: var(--navy-light); color: white; }
+.btn-gold { background: var(--gold-dark); color: white; border: none; }
+.btn-gold:hover { background: var(--gold); color: white; }
+.btn-outline-gold { border: 1px solid var(--gold-dark); color: var(--gold-dark); }
+.btn-outline-gold:hover { background: var(--gold-dark); color: white; }
+
+/* ---- Filter Buttons ---- */
+.filter-btn {
+    display: inline-block; text-decoration: none;
+    border: 1px solid #ddd; background: white; color: #555;
+    border-radius: 20px; padding: 0.3rem 0.9rem; font-size: 0.85rem;
+    transition: all 0.2s;
+}
+.filter-btn:hover, .filter-btn.active {
+    background: var(--navy); color: white; border-color: var(--navy);
+}
+
+/* ---- Forms ---- */
+.form-label { font-weight: 600; margin-bottom: 0.3rem; }
+.form-control:focus, .form-select:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 0.2rem rgba(201, 169, 110, 0.2);
+}
+
+/* ---- Section Title ---- */
+.section-title {
+    color: var(--navy); font-weight: bold;
+    border-bottom: 2px solid var(--gold);
+    padding-bottom: 0.4rem; margin-bottom: 1rem;
+}
+
+/* ---- Signature ---- */
+.signature-display {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 1.5em; font-style: italic; color: #003366; padding: 5px 0;
+}
+
+/* ---- Footer ---- */
+.footer-gov {
+    background: var(--navy); color: rgba(255,255,255,0.7);
+    padding: 0.8rem 0; font-size: 0.8rem;
+    border-top: 3px solid var(--gold);
+}
+
 /* ---- Login ---- */
 .login-bg {
-    background: linear-gradient(135deg, var(--navy) 0%, #0D1B30 100%);
+    background: linear-gradient(135deg, #e8ecf1 0%, #d5dce6 50%, #c8d0db 100%);
     min-height: 100vh;
 }
 .login-card {
-    border: none;
-    border-radius: 12px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
-    border-top: 4px solid var(--gold);
+    border-top: 4px solid var(--gold) !important;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12) !important;
 }
 
-/* ---- Delete checkbox hidden ---- */
-input[type="checkbox"][name$="-DELETE"] {
-    display: none;
-}
+/* ---- Empty State ---- */
+.empty-state { text-align: center; padding: 1.5rem; color: #999; }
+.empty-state i { font-size: 2rem; color: #ddd; display: block; margin-bottom: 0.4rem; }
 
-/* ---- Phone/LTR fields ---- */
-[dir="ltr"] {
-    text-align: left;
-}
+/* ---- Language rows ---- */
+.language-row { background: #fafafa; transition: background 0.2s; }
+.language-row:hover { background: #f0f4ff; }
+
+/* ---- Misc ---- */
+.min-vh-100 { min-height: 100vh; }
+.alert-sm { padding: 0.5rem 1rem; font-size: 0.9em; }
+input[type="checkbox"][name$="-DELETE"] { display: none; }
+[dir="ltr"] { text-align: left; }
 
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
-    .signature-box, .sig-box {
-        display: block;
-        width: 100%;
-        margin-bottom: 20px;
-    }
-    .d-flex.gap-2 {
-        flex-direction: column;
-    }
-    .logo-block img {
-        height: 60px;
-    }
-    .stat-card .stat-number {
-        font-size: 1.4rem;
-    }
+    .page-header { flex-direction: column; gap: 0.5rem; text-align: center; }
+    .signature-box, .sig-box { display: block; width: 100%; margin-bottom: 20px; }
+    .d-flex.gap-2 { flex-direction: column; }
 }
 
 /* ---- Print ---- */
@@ -469,23 +255,4 @@ input[type="checkbox"][name$="-DELETE"] {
     .navbar-gov, .logo-header, .footer-gov, .btn, .alert-dismissible .btn-close {
         display: none !important;
     }
-}
-
-/* ---- Empty state ---- */
-.empty-state {
-    text-align: center;
-    padding: 2rem;
-    color: #999;
-}
-.empty-state i {
-    font-size: 2.5rem;
-    color: #ddd;
-    display: block;
-    margin-bottom: 0.5rem;
-}
-
-/* ---- Alert styles ---- */
-.alert-sm {
-    padding: 0.5rem 1rem;
-    font-size: 0.9em;
 }
