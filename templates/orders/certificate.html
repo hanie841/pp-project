@@ -6,35 +6,35 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-10">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3><i class="bi bi-award"></i> شهادة إنجاز</h3>
+        <div class="page-header">
+            <h3><i class="bi bi-award-fill"></i> شهادة إنجاز</h3>
             <div class="d-flex gap-2">
-                <a href="{% url 'certificate_pdf' order.pk %}" class="btn btn-primary" target="_blank">
+                <a href="{% url 'certificate_pdf' order.pk %}" class="btn btn-navy" target="_blank">
                     <i class="bi bi-file-pdf"></i> تصدير PDF
                 </a>
-                <a href="{% url 'order_detail' order.pk %}" class="btn btn-outline-secondary">
+                <a href="{% url 'order_detail' order.pk %}" class="btn btn-outline-gold">
                     <i class="bi bi-arrow-right"></i> العودة لأمر التكليف
                 </a>
             </div>
         </div>
 
-        <div class="card">
+        <div class="card card-accent">
             <div class="card-body p-4">
                 <!-- Header with Logos -->
                 <div class="mb-4">
                     <div class="d-flex justify-content-between align-items-start mb-3" style="direction: ltr;">
-                        <div class="text-center">
-                            <img src="{% static 'images/pp_logo.png' %}" alt="النيابة العامة" style="height: 80px; display: block; margin: 0 auto 5px;">
-                            <div style="font-size: 0.75rem; font-weight: bold; color: #8B7355; letter-spacing: 1px;">الـنـيـابـة الـعـامـة</div>
-                            <div style="font-size: 0.65rem; color: #666;">PUBLIC PROSECUTION</div>
+                        <div class="logo-block">
+                            <img src="{% static 'images/pp_logo.png' %}" alt="النيابة العامة">
+                            <p class="logo-text-ar">الـنـيـابـة الـعـامـة</p>
+                            <p class="logo-text-en">PUBLIC PROSECUTION</p>
                         </div>
-                        <div class="text-center">
-                            <img src="{% static 'images/uae_emblem.png' %}" alt="الإمارات العربية المتحدة" style="height: 80px; display: block; margin: 0 auto 5px;">
-                            <div style="font-size: 0.75rem; font-weight: bold; color: #8B7355;">الإمارات العربية المتحدة</div>
-                            <div style="font-size: 0.65rem; color: #666;">United Arab Emirates</div>
+                        <div class="logo-block">
+                            <img src="{% static 'images/uae_emblem.png' %}" alt="الإمارات العربية المتحدة">
+                            <p class="logo-text-ar">الإمارات العربية المتحدة</p>
+                            <p class="logo-text-en">United Arab Emirates</p>
                         </div>
                     </div>
-                    <div class="text-center p-2 rounded" style="background: #3C5068; color: white;">
+                    <div class="text-center p-2 rounded" style="background: var(--navy); color: white;">
                         <h4 class="mb-0" style="letter-spacing: 3px;">شهادة إنجاز</h4>
                     </div>
                 </div>
@@ -42,30 +42,29 @@
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <table class="table table-borderless table-sm">
-                            <tr><th>تكليف رقم:</th><td>{{ order.order_number }}</td></tr>
-                            <tr><th>تاريخ شهادة الانجاز:</th><td>{{ certificate.certificate_date|date:"Y/m/d" }}</td></tr>
-                            <tr><th>رقم العقد:</th><td>{{ contract_number }}</td></tr>
-                            <tr><th>موضوع العقد:</th><td>توفير خدمات ترجمة قانونية للنيابة العامة الاتحادية</td></tr>
-                            <tr><th>اسم المورد:</th><td>شركة سمارت وورلد للغة والتكنولوجيا</td></tr>
+                            <tr><th style="color: var(--gold-dark);">تكليف رقم:</th><td>{{ order.order_number }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">تاريخ شهادة الانجاز:</th><td>{{ certificate.certificate_date|date:"Y/m/d" }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">رقم العقد:</th><td>{{ contract_number }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">موضوع العقد:</th><td>توفير خدمات ترجمة قانونية للنيابة العامة الاتحادية</td></tr>
+                            <tr><th style="color: var(--gold-dark);">اسم المورد:</th><td>شركة سمارت وورلد للغة والتكنولوجيا</td></tr>
                         </table>
                     </div>
                     <div class="col-md-6">
                         <table class="table table-borderless table-sm">
-                            <tr><th>رقم الفاتورة:</th><td>{{ certificate.invoice_number }}</td></tr>
-                            <tr><th>تاريخ الفاتورة:</th><td>{{ certificate.invoice_date|date:"Y/m/d" }}</td></tr>
-                            <tr><th>إجمالي العقد:</th><td>500,000 درهم</td></tr>
-                            <tr><th>النيابة:</th><td>{{ order.prosecution.name }}</td></tr>
-                            <tr><th>نوع الخدمة:</th><td>{{ order.get_service_type_display }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">رقم الفاتورة:</th><td>{{ certificate.invoice_number }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">تاريخ الفاتورة:</th><td>{{ certificate.invoice_date|date:"Y/m/d" }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">إجمالي العقد:</th><td>500,000 درهم</td></tr>
+                            <tr><th style="color: var(--gold-dark);">النيابة:</th><td>{{ order.prosecution.name }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">نوع الخدمة:</th><td>{{ order.get_service_type_display }}</td></tr>
                         </table>
                     </div>
                 </div>
 
                 <hr>
 
-                <!-- Line Items -->
-                <h6 style="color: #8B7355;"><i class="bi bi-table"></i> خدمات التنفيذ وفقا للعقد</h6>
-                <table class="table table-bordered">
-                    <thead class="table-dark">
+                <h6 class="section-title"><i class="bi bi-table"></i> خدمات التنفيذ وفقا للعقد</h6>
+                <table class="table table-bordered table-gov">
+                    <thead>
                         <tr>
                             <th>م</th>
                             <th>اللغة</th>
@@ -93,12 +92,12 @@
                             <th>{{ certificate.subtotal|floatformat:2 }}</th>
                             <td></td>
                         </tr>
-                        <tr>
+                        <tr style="background: #fff8e1;">
                             <th colspan="4" class="text-start">ضريبة القيمة المضافة ({{ certificate.vat_rate }}%)</th>
                             <th>{{ certificate.vat_amount|floatformat:2 }}</th>
                             <td></td>
                         </tr>
-                        <tr class="table-primary">
+                        <tr style="background: var(--navy); color: white;">
                             <th colspan="4" class="text-start">إجمالي قيمة المستحقات</th>
                             <th class="fs-5">{{ certificate.grand_total|floatformat:2 }}</th>
                             <td></td>
@@ -109,26 +108,26 @@
                 <!-- Signatures -->
                 <div class="row mt-5">
                     <div class="col-md-4 text-center">
-                        <div class="border-top pt-3">
-                            <strong style="color: #8B7355;">اعتماد القسم الطالب</strong><br>
+                        <div class="border-top pt-3" style="border-color: var(--gold) !important;">
+                            <strong style="color: var(--gold-dark);">اعتماد القسم الطالب</strong><br>
                             <div class="signature-display">{{ order.prosecutor_display }}</div>
                             <small class="text-muted">التوقيع</small>
                         </div>
                     </div>
                     <div class="col-md-4 text-center">
-                        <div class="border-top pt-3">
-                            <strong style="color: #8B7355;">مسؤول إدارة العقد</strong><br>
+                        <div class="border-top pt-3" style="border-color: var(--gold) !important;">
+                            <strong style="color: var(--gold-dark);">مسؤول إدارة العقد</strong><br>
                             <div class="signature-display">&nbsp;</div>
                             <small class="text-muted">التوقيع</small>
                         </div>
                     </div>
                     <div class="col-md-4 text-center">
-                        <div class="border-top pt-3">
-                            <strong style="color: #8B7355;">مسؤول العقد</strong><br>
+                        <div class="border-top pt-3" style="border-color: var(--gold) !important;">
+                            <strong style="color: var(--gold-dark);">مسؤول العقد</strong><br>
                             {% if order.approval.smartworld_approved_at %}
                             <div class="signature-display">{{ order.approval.smartworld_approved_by.get_full_name }}</div>
                             <small class="text-success">
-                                <i class="bi bi-check-circle"></i>
+                                <i class="bi bi-check-circle-fill"></i>
                                 التوقيع
                                 <br>{{ order.approval.smartworld_approved_at|date:"Y/m/d H:i" }}
                             </small>

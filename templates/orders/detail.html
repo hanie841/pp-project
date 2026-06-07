@@ -6,49 +6,45 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-10">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="page-header">
             <h3><i class="bi bi-file-earmark-text"></i> أمر تكليف {{ order.order_number }}</h3>
             <div class="d-flex gap-2">
-                <a href="{% url 'order_pdf' order.pk %}" class="btn btn-outline-secondary btn-sm" target="_blank">
+                <a href="{% url 'order_pdf' order.pk %}" class="btn btn-navy btn-sm" target="_blank">
                     <i class="bi bi-file-pdf"></i> تصدير PDF
                 </a>
-                <a href="{% url 'order_list' %}" class="btn btn-outline-secondary btn-sm">
+                <a href="{% url 'order_list' %}" class="btn btn-outline-gold btn-sm">
                     <i class="bi bi-arrow-right"></i> العودة
                 </a>
             </div>
         </div>
 
         <!-- Status Timeline -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <div class="d-flex justify-content-between text-center">
-                    {% with statuses="SUBMITTED,ACCEPTED,IN_PROGRESS,PENDING_APPROVAL,COMPLETED" %}
-                    {% for s in statuses|make_list %}
-                    {% endfor %}
-                    {% endwith %}
-                    <div class="flex-fill">
-                        <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center {% if order.status == 'SUBMITTED' or order.status == 'ACCEPTED' or order.status == 'IN_PROGRESS' or order.status == 'PENDING_APPROVAL' or order.status == 'COMPLETED' %}bg-success text-white{% else %}bg-light{% endif %}" style="width:40px;height:40px;">
-                            <i class="bi bi-send"></i>
+        <div class="card card-accent mb-4">
+            <div class="card-body py-4">
+                <div class="d-flex justify-content-between">
+                    <div class="timeline-step">
+                        <div class="timeline-dot {% if order.status == 'SUBMITTED' or order.status == 'ACCEPTED' or order.status == 'IN_PROGRESS' or order.status == 'PENDING_APPROVAL' or order.status == 'COMPLETED' %}timeline-dot-done{% else %}timeline-dot-pending{% endif %}">
+                            <i class="bi bi-send-fill"></i>
                         </div>
-                        <small>مقدم</small>
+                        <div class="timeline-label">مقدم</div>
                     </div>
-                    <div class="flex-fill">
-                        <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center {% if order.status == 'ACCEPTED' or order.status == 'IN_PROGRESS' or order.status == 'PENDING_APPROVAL' or order.status == 'COMPLETED' %}bg-success text-white{% else %}bg-light{% endif %}" style="width:40px;height:40px;">
+                    <div class="timeline-step">
+                        <div class="timeline-dot {% if order.status == 'ACCEPTED' or order.status == 'IN_PROGRESS' or order.status == 'PENDING_APPROVAL' or order.status == 'COMPLETED' %}timeline-dot-done{% elif order.status == 'SUBMITTED' %}timeline-dot-current{% else %}timeline-dot-pending{% endif %}">
                             <i class="bi bi-check-lg"></i>
                         </div>
-                        <small>مقبول</small>
+                        <div class="timeline-label">مقبول</div>
                     </div>
-                    <div class="flex-fill">
-                        <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center {% if order.status == 'PENDING_APPROVAL' or order.status == 'COMPLETED' %}bg-success text-white{% else %}bg-light{% endif %}" style="width:40px;height:40px;">
+                    <div class="timeline-step">
+                        <div class="timeline-dot {% if order.status == 'PENDING_APPROVAL' or order.status == 'COMPLETED' %}timeline-dot-done{% elif order.status == 'ACCEPTED' or order.status == 'IN_PROGRESS' %}timeline-dot-current{% else %}timeline-dot-pending{% endif %}">
                             <i class="bi bi-pencil-square"></i>
                         </div>
-                        <small>تم التسجيل</small>
+                        <div class="timeline-label">تم التسجيل</div>
                     </div>
-                    <div class="flex-fill">
-                        <div class="rounded-circle mx-auto d-flex align-items-center justify-content-center {% if order.status == 'COMPLETED' %}bg-success text-white{% elif order.status == 'DISPUTED' %}bg-danger text-white{% else %}bg-light{% endif %}" style="width:40px;height:40px;">
-                            <i class="bi bi-check-circle"></i>
+                    <div class="timeline-step">
+                        <div class="timeline-dot {% if order.status == 'COMPLETED' %}timeline-dot-done{% elif order.status == 'PENDING_APPROVAL' %}timeline-dot-current{% elif order.status == 'DISPUTED' %}timeline-dot-error{% else %}timeline-dot-pending{% endif %}">
+                            <i class="bi bi-check-circle-fill"></i>
                         </div>
-                        <small>{% if order.status == 'DISPUTED' %}متنازع{% else %}مكتمل{% endif %}</small>
+                        <div class="timeline-label">{% if order.status == 'DISPUTED' %}متنازع{% else %}مكتمل{% endif %}</div>
                     </div>
                 </div>
             </div>
@@ -56,19 +52,21 @@
 
         <div class="row">
             <div class="col-md-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-header">معلومات الطلب</div>
+                <div class="card card-accent h-100">
+                    <div class="card-header card-header-navy">
+                        <i class="bi bi-info-circle"></i> معلومات الطلب
+                    </div>
                     <div class="card-body">
                         <table class="table table-borderless">
-                            <tr><th>رقم الأمر:</th><td>{{ order.order_number }}</td></tr>
-                            <tr><th>تاريخ الطلب:</th><td>{{ order.request_date|date:"Y/m/d" }}</td></tr>
-                            <tr><th>النيابة:</th><td>{{ order.prosecution.name }}</td></tr>
-                            <tr><th>المحقق:</th><td>{{ order.prosecutor_display }}</td></tr>
-                            <tr><th>نوع الخدمة:</th><td>{{ order.get_service_type_display }}</td></tr>
-                            <tr><th>الحالة:</th><td><span class="badge bg-secondary">{{ order.get_status_display }}</span></td></tr>
-                            <tr><th>مقدم بواسطة:</th><td>{{ order.created_by.get_full_name }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">رقم الأمر:</th><td>{{ order.order_number }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">تاريخ الطلب:</th><td>{{ order.request_date|date:"Y/m/d" }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">النيابة:</th><td>{{ order.prosecution.name }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">المحقق:</th><td>{{ order.prosecutor_display }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">نوع الخدمة:</th><td>{{ order.get_service_type_display }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">الحالة:</th><td><span class="badge badge-{{ order.status|lower }}">{{ order.get_status_display }}</span></td></tr>
+                            <tr><th style="color: var(--gold-dark);">مقدم بواسطة:</th><td>{{ order.created_by.get_full_name }}</td></tr>
                             {% if order.submitted_at %}
-                            <tr><th>تاريخ التقديم:</th><td>{{ order.submitted_at|date:"Y/m/d H:i" }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">تاريخ التقديم:</th><td>{{ order.submitted_at|date:"Y/m/d H:i" }}</td></tr>
                             {% endif %}
                         </table>
                     </div>
@@ -76,24 +74,26 @@
             </div>
 
             <div class="col-md-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-header">تفاصيل التنفيذ</div>
+                <div class="card card-accent h-100">
+                    <div class="card-header card-header-navy">
+                        <i class="bi bi-calendar-event"></i> تفاصيل التنفيذ
+                    </div>
                     <div class="card-body">
                         <table class="table table-borderless">
-                            <tr><th>تاريخ التنفيذ:</th><td>{{ order.execution_date|date:"Y/m/d" }}</td></tr>
-                            <tr><th>وقت التنفيذ:</th><td>{{ order.execution_time|time:"H:i" }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">تاريخ التنفيذ:</th><td>{{ order.execution_date|date:"Y/m/d" }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">وقت التنفيذ:</th><td>{{ order.execution_time|time:"H:i" }}</td></tr>
                             {% if order.estimated_duration %}
-                            <tr><th>المدة التقديرية:</th><td>{{ order.estimated_duration }} ساعة</td></tr>
+                            <tr><th style="color: var(--gold-dark);">المدة التقديرية:</th><td>{{ order.estimated_duration }} ساعة</td></tr>
                             {% endif %}
-                            <tr><th>نوع الموقع:</th><td>{{ order.get_location_type_display }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">نوع الموقع:</th><td>{{ order.get_location_type_display }}</td></tr>
                             {% if order.location_detail %}
-                            <tr><th>تفاصيل الموقع:</th><td>{{ order.location_detail }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">تفاصيل الموقع:</th><td>{{ order.location_detail }}</td></tr>
                             {% endif %}
                             {% if order.contact_name %}
-                            <tr><th>التوقيع:</th><td><span class="signature-display">{{ order.contact_name }}</span></td></tr>
+                            <tr><th style="color: var(--gold-dark);">التوقيع:</th><td><span class="signature-display">{{ order.contact_name }}</span></td></tr>
                             {% endif %}
                             {% if order.contact_phone %}
-                            <tr><th>الهاتف:</th><td dir="ltr">{{ order.contact_phone }}</td></tr>
+                            <tr><th style="color: var(--gold-dark);">الهاتف:</th><td dir="ltr">{{ order.contact_phone }}</td></tr>
                             {% endif %}
                         </table>
                     </div>
@@ -102,11 +102,13 @@
         </div>
 
         <!-- Languages -->
-        <div class="card mb-4">
-            <div class="card-header">اللغات والتكلفة التقديرية</div>
+        <div class="card card-accent mb-4">
+            <div class="card-header card-header-navy">
+                <i class="bi bi-translate"></i> اللغات والتكلفة التقديرية
+            </div>
             <div class="card-body p-0">
-                <table class="table mb-0">
-                    <thead class="table-light">
+                <table class="table table-hover table-gov mb-0">
+                    <thead>
                         <tr>
                             <th>اللغة</th>
                             <th>عدد المترجمين</th>
@@ -126,7 +128,7 @@
                         </tr>
                         {% endfor %}
                     </tbody>
-                    <tfoot class="table-dark">
+                    <tfoot>
                         <tr>
                             <th colspan="4">المجموع التقديري</th>
                             <th>{{ order.estimated_total|currency }}</th>
@@ -137,19 +139,23 @@
         </div>
 
         {% if order.notes %}
-        <div class="card mb-4">
-            <div class="card-header">ملاحظات</div>
+        <div class="card card-accent mb-4">
+            <div class="card-header card-header-navy">
+                <i class="bi bi-chat-text"></i> ملاحظات
+            </div>
             <div class="card-body">{{ order.notes }}</div>
         </div>
         {% endif %}
 
-        <!-- Service Records (if any) -->
+        <!-- Service Records -->
         {% if order.service_records.count > 0 %}
-        <div class="card mb-4">
-            <div class="card-header bg-info text-white">سجل الخدمة الفعلية</div>
+        <div class="card card-accent mb-4">
+            <div class="card-header card-header-gold">
+                <i class="bi bi-clipboard-data"></i> سجل الخدمة الفعلية
+            </div>
             <div class="card-body p-0">
-                <table class="table mb-0">
-                    <thead class="table-light">
+                <table class="table table-hover table-gov mb-0">
+                    <thead>
                         <tr>
                             <th>اللغة</th>
                             <th>عدد المترجمين</th>
@@ -174,32 +180,32 @@
         </div>
         {% endif %}
 
-        <!-- Dispute info -->
+        <!-- Dispute -->
         {% if order.status == 'DISPUTED' and order.approval.pp_dispute_reason %}
         <div class="alert alert-danger">
-            <h6><i class="bi bi-exclamation-triangle"></i> سبب الاعتراض:</h6>
+            <h6><i class="bi bi-exclamation-triangle-fill"></i> سبب الاعتراض:</h6>
             <p class="mb-0">{{ order.approval.pp_dispute_reason }}</p>
         </div>
         {% endif %}
 
-        <!-- Action Buttons -->
+        <!-- Actions -->
         <div class="d-flex gap-2 mt-4">
             {% if user.is_superuser or profile and profile.is_smartworld %}
             {% if order.status == 'SUBMITTED' %}
             <form method="post" action="{% url 'order_accept' order.pk %}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-success btn-lg">
-                    <i class="bi bi-check-circle"></i> قبول أمر التكليف
+                    <i class="bi bi-check-circle-fill"></i> قبول أمر التكليف
                 </button>
             </form>
             {% endif %}
             {% if order.status == 'ACCEPTED' %}
-            <a href="{% url 'order_log_service' order.pk %}" class="btn btn-primary btn-lg">
+            <a href="{% url 'order_log_service' order.pk %}" class="btn btn-navy btn-lg">
                 <i class="bi bi-pencil-square"></i> تسجيل الخدمة الفعلية
             </a>
             {% endif %}
             {% if order.status == 'DISPUTED' %}
-            <a href="{% url 'order_log_service' order.pk %}" class="btn btn-warning btn-lg">
+            <a href="{% url 'order_log_service' order.pk %}" class="btn btn-gold btn-lg">
                 <i class="bi bi-arrow-repeat"></i> إعادة تسجيل الخدمة
             </a>
             {% endif %}
@@ -207,7 +213,7 @@
 
             {% if user.is_superuser or profile and profile.is_pp_staff %}
             {% if order.status == 'PENDING_APPROVAL' %}
-            <a href="{% url 'order_approve' order.pk %}" class="btn btn-warning btn-lg">
+            <a href="{% url 'order_approve' order.pk %}" class="btn btn-gold btn-lg">
                 <i class="bi bi-clipboard-check"></i> مراجعة واعتماد
             </a>
             {% endif %}
@@ -215,15 +221,15 @@
 
             {% if order.status == 'COMPLETED' %}
             <a href="{% url 'order_certificate' order.pk %}" class="btn btn-success btn-lg">
-                <i class="bi bi-award"></i> شهادة الإنجاز
+                <i class="bi bi-award-fill"></i> شهادة الإنجاز
             </a>
             {% endif %}
         </div>
 
-        <!-- Meeting Link Form -->
+        <!-- Meeting Link -->
         {% if meeting_link_form or user.is_superuser and order.location_type == 'NEED_LINK' and order.status in 'SUBMITTED,ACCEPTED' %}
-        <div class="card mt-4">
-            <div class="card-header bg-info text-white">
+        <div class="card card-accent mt-4">
+            <div class="card-header card-header-navy">
                 <i class="bi bi-link-45deg"></i> توفير رابط الاجتماع
             </div>
             <div class="card-body">
@@ -231,8 +237,8 @@
                     {% csrf_token %}
                     <div class="input-group">
                         {{ meeting_link_form.meeting_link }}
-                        <button type="submit" class="btn btn-info">
-                            <i class="bi bi-send"></i> إرسال
+                        <button type="submit" class="btn btn-navy">
+                            <i class="bi bi-send-fill"></i> إرسال
                         </button>
                     </div>
                 </form>

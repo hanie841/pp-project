@@ -68,6 +68,16 @@ def dashboard(request):
     else:
         context['usage_percent'] = 0
 
+    # Stats for summary cards
+    context['stats'] = {
+        'total': WorkOrder.objects.exclude(status=WorkOrder.Status.DRAFT).count(),
+        'active': WorkOrder.objects.filter(status__in=[
+            WorkOrder.Status.SUBMITTED, WorkOrder.Status.ACCEPTED, WorkOrder.Status.IN_PROGRESS,
+        ]).count(),
+        'pending': WorkOrder.objects.filter(status=WorkOrder.Status.PENDING_APPROVAL).count(),
+        'completed': WorkOrder.objects.filter(status=WorkOrder.Status.COMPLETED).count(),
+    }
+
     if request.user.is_superuser:
         context['all_orders'] = WorkOrder.objects.all()[:20]
         context['incoming_orders'] = WorkOrder.objects.filter(

@@ -1,119 +1,491 @@
-/* PP Translation Services Portal - Custom RTL Styles */
+/* ============================================
+   PP Translation Services Portal
+   Official Government Design System
+   Color Palette:
+     Navy:   #1B2A4A
+     Gold:   #C9A96E
+     Accent: #8B7355
+     Light:  #F4F6F9
+   ============================================ */
+
+:root {
+    --navy: #1B2A4A;
+    --navy-light: #243656;
+    --gold: #C9A96E;
+    --gold-light: #D4B87A;
+    --gold-dark: #8B7355;
+    --bg-light: #F4F6F9;
+    --card-shadow: 0 2px 12px rgba(27, 42, 74, 0.08);
+    --card-shadow-hover: 0 4px 20px rgba(27, 42, 74, 0.14);
+}
 
 body {
     font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: var(--bg-light);
+    color: #333;
 }
 
-/* Navbar */
-.navbar-brand {
+/* ---- Logo Header ---- */
+.logo-header {
+    background: white;
+    border-bottom: 3px solid var(--gold);
+    padding: 1rem 0;
+}
+.logo-block {
+    text-align: center;
+}
+.logo-block img {
+    height: 80px;
+    display: block;
+    margin: 0 auto 5px;
+}
+.logo-text-ar {
+    font-size: 0.75rem;
     font-weight: bold;
+    color: var(--gold-dark);
+    letter-spacing: 1px;
+    margin: 0;
+}
+.logo-text-en {
+    font-size: 0.65rem;
+    color: #888;
+    margin: 0;
+}
+.portal-title {
+    color: var(--navy);
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin: 0;
+}
+.portal-subtitle {
+    color: var(--gold-dark);
+    font-size: 0.8rem;
+    margin: 0;
 }
 
-/* Cards */
+/* ---- Navbar ---- */
+.navbar-gov {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+    border-bottom: 2px solid var(--gold);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    padding: 0.4rem 0;
+}
+.navbar-gov .nav-link {
+    color: rgba(255,255,255,0.85) !important;
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+.navbar-gov .nav-link:hover,
+.navbar-gov .nav-link.active {
+    color: #fff !important;
+    background: rgba(201, 169, 110, 0.2);
+}
+.navbar-gov .nav-link i {
+    color: var(--gold);
+}
+.navbar-gov .navbar-brand {
+    color: var(--gold) !important;
+    font-weight: bold;
+    font-size: 0.95rem;
+}
+
+/* ---- Cards ---- */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: var(--card-shadow);
+    transition: box-shadow 0.3s;
+    overflow: hidden;
+}
+.card:hover {
+    box-shadow: var(--card-shadow-hover);
+}
 .card-header {
     font-weight: bold;
+    font-size: 0.95rem;
+    border-bottom: 1px solid #eee;
+}
+.card-header-navy {
+    background: var(--navy) !important;
+    color: white !important;
+    border: none;
+}
+.card-header-navy i {
+    color: var(--gold);
+}
+.card-header-gold {
+    background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%) !important;
+    color: white !important;
+    border: none;
+}
+.card-accent {
+    border-top: 3px solid var(--gold);
 }
 
-/* Status badge colors */
-.badge {
+/* ---- Stat Cards ---- */
+.stat-card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: var(--card-shadow);
+    padding: 1.2rem;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.3s;
+    position: relative;
+    overflow: hidden;
+}
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--card-shadow-hover);
+}
+.stat-card .stat-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+.stat-card .stat-number {
+    font-size: 1.8rem;
+    font-weight: 800;
+    line-height: 1;
+}
+.stat-card .stat-label {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.3rem;
+}
+.stat-card-navy {
+    background: linear-gradient(135deg, var(--navy), var(--navy-light));
+    color: white;
+}
+.stat-card-navy .stat-label { color: rgba(255,255,255,0.7); }
+.stat-card-navy .stat-icon { color: var(--gold); }
+.stat-card-gold {
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+    color: white;
+}
+.stat-card-gold .stat-label { color: rgba(255,255,255,0.8); }
+.stat-card-success {
+    background: white;
+    border-right: 4px solid #1B7A43;
+}
+.stat-card-success .stat-icon { color: #1B7A43; }
+.stat-card-success .stat-number { color: #1B7A43; }
+.stat-card-warning {
+    background: white;
+    border-right: 4px solid #F9A825;
+}
+.stat-card-warning .stat-icon { color: #F9A825; }
+.stat-card-warning .stat-number { color: #F9A825; }
+.stat-card-info {
+    background: white;
+    border-right: 4px solid #1565C0;
+}
+.stat-card-info .stat-icon { color: #1565C0; }
+.stat-card-info .stat-number { color: #1565C0; }
+
+/* ---- Budget Progress ---- */
+.budget-card {
+    border-top: 3px solid var(--gold);
+    background: white;
+}
+.budget-card .progress {
+    height: 28px;
+    border-radius: 14px;
+    background: #e9ecef;
+}
+.budget-card .progress-bar {
+    border-radius: 14px;
+    font-weight: bold;
     font-size: 0.85em;
 }
 
-/* Progress bar */
-.progress {
-    border-radius: 12px;
+/* ---- Tables ---- */
+.table-gov thead {
+    background: var(--navy);
+    color: white;
+}
+.table-gov thead th {
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 0.75rem;
+    white-space: nowrap;
+    border: none;
+}
+.table-gov tbody tr {
+    transition: background 0.15s;
+}
+.table-gov tbody tr:hover {
+    background: rgba(201, 169, 110, 0.08);
+}
+.table-gov tfoot {
+    background: var(--navy);
+    color: white;
 }
 
-.progress-bar {
-    border-radius: 12px;
-    font-weight: bold;
-    font-size: 0.9em;
+/* ---- Status Badges ---- */
+.badge {
+    font-size: 0.8em;
+    padding: 0.4em 0.8em;
+    border-radius: 20px;
+    font-weight: 600;
+}
+.badge-draft { background: #78909C; color: white; }
+.badge-submitted { background: #1565C0; color: white; }
+.badge-accepted { background: #00838F; color: white; }
+.badge-in_progress { background: var(--gold-dark); color: white; }
+.badge-pending_approval { background: #F9A825; color: #333; }
+.badge-completed { background: #1B7A43; color: white; }
+.badge-disputed { background: #C62828; color: white; }
+
+/* ---- Timeline ---- */
+.timeline-step {
+    text-align: center;
+    flex: 1;
+    position: relative;
+}
+.timeline-step::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    right: 50%;
+    width: 100%;
+    height: 2px;
+    background: #ddd;
+    z-index: 0;
+}
+.timeline-step:first-child::before {
+    display: none;
+}
+.timeline-dot {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 6px;
+    position: relative;
+    z-index: 1;
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+.timeline-dot-done {
+    background: var(--navy);
+    color: var(--gold);
+    box-shadow: 0 2px 8px rgba(27, 42, 74, 0.3);
+}
+.timeline-dot-current {
+    background: var(--gold);
+    color: white;
+    box-shadow: 0 2px 12px rgba(201, 169, 110, 0.5);
+    animation: pulse 2s infinite;
+}
+.timeline-dot-pending {
+    background: #e9ecef;
+    color: #aaa;
+}
+.timeline-dot-error {
+    background: #C62828;
+    color: white;
+}
+.timeline-label {
+    font-size: 0.75rem;
+    color: #666;
+    font-weight: 600;
 }
 
-/* Forms */
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 2px 12px rgba(201, 169, 110, 0.5); }
+    50% { box-shadow: 0 2px 20px rgba(201, 169, 110, 0.8); }
+}
+
+/* ---- List Group ---- */
+.list-group-item {
+    border-color: #f0f0f0;
+    transition: background 0.15s;
+}
+.list-group-item:hover {
+    background: rgba(201, 169, 110, 0.06);
+}
+
+/* ---- Buttons ---- */
+.btn-navy {
+    background: var(--navy);
+    color: white;
+    border: none;
+}
+.btn-navy:hover {
+    background: var(--navy-light);
+    color: white;
+}
+.btn-gold {
+    background: var(--gold);
+    color: white;
+    border: none;
+}
+.btn-gold:hover {
+    background: var(--gold-light);
+    color: white;
+}
+.btn-outline-gold {
+    border: 1px solid var(--gold);
+    color: var(--gold-dark);
+}
+.btn-outline-gold:hover {
+    background: var(--gold);
+    color: white;
+}
+
+/* ---- Status Filter Buttons ---- */
+.filter-btn {
+    border: 1px solid #ddd;
+    background: white;
+    color: #555;
+    border-radius: 20px;
+    padding: 0.3rem 0.9rem;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+.filter-btn:hover, .filter-btn.active {
+    background: var(--navy);
+    color: white;
+    border-color: var(--navy);
+}
+
+/* ---- Forms ---- */
 .form-label {
     font-weight: 600;
     margin-bottom: 0.3rem;
+    color: var(--navy);
 }
-
 .form-control:focus,
 .form-select:focus {
-    border-color: #8B7355;
-    box-shadow: 0 0 0 0.2rem rgba(139, 115, 85, 0.15);
+    border-color: var(--gold);
+    box-shadow: 0 0 0 0.2rem rgba(201, 169, 110, 0.2);
 }
 
-/* Language rows */
-.language-row {
-    background: #fafafa;
-    transition: background 0.2s;
+/* ---- Section Title ---- */
+.section-title {
+    color: var(--navy);
+    font-size: 1.1rem;
+    font-weight: bold;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--gold);
+    margin-bottom: 1rem;
 }
 
-.language-row:hover {
-    background: #f0f4ff;
-}
-
-/* Tables */
-.table th {
-    white-space: nowrap;
-}
-
-/* Login page */
-.min-vh-100 {
-    min-height: 100vh;
-}
-
-/* Timeline */
-.rounded-circle {
-    transition: all 0.3s;
-}
-
-/* Footer */
-footer {
-    font-size: 0.85em;
-}
-
-/* Alert styles */
-.alert-sm {
-    padding: 0.5rem 1rem;
-    font-size: 0.9em;
-}
-
-/* Delete checkbox hidden */
-input[type="checkbox"][name$="-DELETE"] {
-    display: none;
-}
-
-/* Signature style for web views */
+/* ---- Signature ---- */
 .signature-display {
     font-family: 'Georgia', 'Times New Roman', serif;
     font-size: 1.5em;
     font-style: italic;
-    color: #003366;
+    color: var(--navy);
     padding: 5px 0;
 }
 
-/* Responsive fixes */
+/* ---- Footer ---- */
+.footer-gov {
+    background: var(--navy);
+    color: rgba(255,255,255,0.7);
+    padding: 1rem 0;
+    font-size: 0.8rem;
+    border-top: 3px solid var(--gold);
+}
+.footer-gov a {
+    color: var(--gold);
+    text-decoration: none;
+}
+
+/* ---- Language rows ---- */
+.language-row {
+    background: #fafafa;
+    transition: background 0.2s;
+    border-radius: 8px;
+}
+.language-row:hover {
+    background: rgba(201, 169, 110, 0.06);
+}
+
+/* ---- Page Header ---- */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--gold);
+}
+.page-header h3 {
+    color: var(--navy);
+    margin: 0;
+    font-weight: bold;
+}
+.page-header h3 i {
+    color: var(--gold);
+}
+
+/* ---- Login ---- */
+.login-bg {
+    background: linear-gradient(135deg, var(--navy) 0%, #0D1B30 100%);
+    min-height: 100vh;
+}
+.login-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+    border-top: 4px solid var(--gold);
+}
+
+/* ---- Delete checkbox hidden ---- */
+input[type="checkbox"][name$="-DELETE"] {
+    display: none;
+}
+
+/* ---- Phone/LTR fields ---- */
+[dir="ltr"] {
+    text-align: left;
+}
+
+/* ---- Responsive ---- */
 @media (max-width: 768px) {
     .signature-box, .sig-box {
         display: block;
         width: 100%;
         margin-bottom: 20px;
     }
-
     .d-flex.gap-2 {
         flex-direction: column;
     }
-
+    .logo-block img {
+        height: 60px;
+    }
+    .stat-card .stat-number {
+        font-size: 1.4rem;
+    }
 }
 
-/* Phone/LTR fields */
-[dir="ltr"] {
-    text-align: left;
-}
-
-/* Print styles */
+/* ---- Print ---- */
 @media print {
-    .navbar, footer, .btn, .alert-dismissible .btn-close {
+    .navbar-gov, .logo-header, .footer-gov, .btn, .alert-dismissible .btn-close {
         display: none !important;
     }
+}
+
+/* ---- Empty state ---- */
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #999;
+}
+.empty-state i {
+    font-size: 2.5rem;
+    color: #ddd;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+/* ---- Alert styles ---- */
+.alert-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.9em;
 }

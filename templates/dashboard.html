@@ -6,16 +6,50 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-10">
-        <h3 class="mb-4"><i class="bi bi-speedometer2"></i> لوحة التحكم</h3>
+        <div class="page-header">
+            <h3><i class="bi bi-speedometer2"></i> لوحة التحكم</h3>
+        </div>
 
-        <!-- Contract Balance Bar -->
-        <div class="card mb-4 border-primary">
+        <!-- Statistics Summary -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="stat-card stat-card-navy">
+                    <div class="stat-icon"><i class="bi bi-file-earmark-text"></i></div>
+                    <div class="stat-number">{{ stats.total|default:"0" }}</div>
+                    <div class="stat-label">إجمالي الأوامر</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card stat-card-info">
+                    <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+                    <div class="stat-number">{{ stats.active|default:"0" }}</div>
+                    <div class="stat-label">قيد التنفيذ</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card stat-card-warning">
+                    <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
+                    <div class="stat-number">{{ stats.pending|default:"0" }}</div>
+                    <div class="stat-label">بانتظار الاعتماد</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card stat-card-success">
+                    <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
+                    <div class="stat-number">{{ stats.completed|default:"0" }}</div>
+                    <div class="stat-label">مكتملة</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contract Budget -->
+        <div class="card budget-card mb-4">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="mb-0">ميزانية العقد</h6>
-                    <span class="badge bg-primary fs-6">{{ total_invoiced|currency }} / {{ contract_total|currency }}</span>
+                    <h6 class="mb-0" style="color: var(--navy);"><i class="bi bi-wallet2" style="color: var(--gold);"></i> ميزانية العقد</h6>
+                    <span class="badge" style="background: var(--navy); font-size: 0.85rem; padding: 0.5em 1em;">{{ total_invoiced|currency }} / {{ contract_total|currency }}</span>
                 </div>
-                <div class="progress" style="height: 25px;">
+                <div class="progress">
                     <div class="progress-bar {% if usage_percent > 80 %}bg-danger{% elif usage_percent > 60 %}bg-warning{% else %}bg-success{% endif %}"
                          role="progressbar" style="width: {{ usage_percent }}%"
                          aria-valuenow="{{ usage_percent }}" aria-valuemin="0" aria-valuemax="100">
@@ -30,8 +64,8 @@
             {% if profile and profile.is_pp_staff %}
             <!-- PP Staff Dashboard -->
             <div class="col-md-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-header bg-primary text-white">
+                <div class="card card-accent h-100">
+                    <div class="card-header card-header-navy">
                         <i class="bi bi-file-earmark-text"></i> أوامر التكليف الخاصة بي
                     </div>
                     <div class="card-body">
@@ -43,25 +77,28 @@
                                     <strong>{{ order.order_number }}</strong>
                                     <br><small class="text-muted">{{ order.get_service_type_display }} - {{ order.execution_date }}</small>
                                 </div>
-                                <span class="badge bg-{{ order.status|lower }} rounded-pill status-badge">{{ order.get_status_display }}</span>
+                                <span class="badge badge-{{ order.status|lower }}">{{ order.get_status_display }}</span>
                             </a>
                             {% endfor %}
                         </div>
                         {% else %}
-                        <p class="text-muted text-center py-3">لا توجد أوامر تكليف</p>
+                        <div class="empty-state">
+                            <i class="bi bi-inbox"></i>
+                            لا توجد أوامر تكليف
+                        </div>
                         {% endif %}
                     </div>
-                    <div class="card-footer">
-                        <a href="{% url 'order_create' %}" class="btn btn-primary btn-sm">
+                    <div class="card-footer bg-transparent">
+                        <a href="{% url 'order_create' %}" class="btn btn-navy btn-sm">
                             <i class="bi bi-plus-circle"></i> أمر تكليف جديد
                         </a>
                     </div>
                 </div>
             </div>
             <div class="col-md-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-header bg-warning text-dark">
-                        <i class="bi bi-clock"></i> بانتظار اعتمادي
+                <div class="card card-accent h-100">
+                    <div class="card-header card-header-gold">
+                        <i class="bi bi-clock-fill"></i> بانتظار اعتمادي
                     </div>
                     <div class="card-body">
                         {% if pending_approval %}
@@ -72,12 +109,15 @@
                                     <strong>{{ order.order_number }}</strong>
                                     <br><small class="text-muted">{{ order.get_service_type_display }}</small>
                                 </div>
-                                <span class="badge bg-warning text-dark rounded-pill">بانتظار الاعتماد</span>
+                                <span class="badge badge-pending_approval">بانتظار الاعتماد</span>
                             </a>
                             {% endfor %}
                         </div>
                         {% else %}
-                        <p class="text-muted text-center py-3">لا توجد أوامر بانتظار الاعتماد</p>
+                        <div class="empty-state">
+                            <i class="bi bi-check-all"></i>
+                            لا توجد أوامر بانتظار الاعتماد
+                        </div>
                         {% endif %}
                     </div>
                 </div>
@@ -86,9 +126,9 @@
             {% elif profile and profile.is_smartworld %}
             <!-- SmartWorld Staff Dashboard -->
             <div class="col-md-4 mb-4">
-                <div class="card h-100">
-                    <div class="card-header bg-info text-white">
-                        <i class="bi bi-inbox"></i> أوامر واردة
+                <div class="card card-accent h-100">
+                    <div class="card-header card-header-navy">
+                        <i class="bi bi-inbox-fill"></i> أوامر واردة
                     </div>
                     <div class="card-body">
                         {% if incoming_orders %}
@@ -101,14 +141,17 @@
                             {% endfor %}
                         </div>
                         {% else %}
-                        <p class="text-muted text-center py-3">لا توجد أوامر واردة</p>
+                        <div class="empty-state">
+                            <i class="bi bi-inbox"></i>
+                            لا توجد أوامر واردة
+                        </div>
                         {% endif %}
                     </div>
                 </div>
             </div>
             <div class="col-md-4 mb-4">
-                <div class="card h-100">
-                    <div class="card-header bg-success text-white">
+                <div class="card card-accent h-100">
+                    <div class="card-header card-header-gold">
                         <i class="bi bi-pencil-square"></i> تسجيل الخدمة
                     </div>
                     <div class="card-body">
@@ -122,14 +165,17 @@
                             {% endfor %}
                         </div>
                         {% else %}
-                        <p class="text-muted text-center py-3">لا توجد أوامر لتسجيل الخدمة</p>
+                        <div class="empty-state">
+                            <i class="bi bi-clipboard-check"></i>
+                            لا توجد أوامر لتسجيل الخدمة
+                        </div>
                         {% endif %}
                     </div>
                 </div>
             </div>
             <div class="col-md-4 mb-4">
-                <div class="card h-100">
-                    <div class="card-header bg-warning text-dark">
+                <div class="card card-accent h-100">
+                    <div class="card-header" style="background: #F9A825; color: #333; border: none;">
                         <i class="bi bi-hourglass-split"></i> بانتظار الاعتماد
                     </div>
                     <div class="card-body">
@@ -143,7 +189,10 @@
                             {% endfor %}
                         </div>
                         {% else %}
-                        <p class="text-muted text-center py-3">لا توجد أوامر بانتظار الاعتماد</p>
+                        <div class="empty-state">
+                            <i class="bi bi-check-all"></i>
+                            لا توجد أوامر بانتظار الاعتماد
+                        </div>
                         {% endif %}
                     </div>
                 </div>
@@ -152,8 +201,8 @@
             {% elif profile and profile.is_contract_manager %}
             <!-- Contract Manager Dashboard -->
             <div class="col-md-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-header bg-dark text-white">
+                <div class="card card-accent h-100">
+                    <div class="card-header card-header-navy">
                         <i class="bi bi-list-check"></i> جميع أوامر التكليف
                     </div>
                     <div class="card-body">
@@ -165,22 +214,25 @@
                                     <strong>{{ order.order_number }}</strong>
                                     <br><small>{{ order.prosecution.name }}</small>
                                 </div>
-                                <span class="badge bg-secondary rounded-pill">{{ order.get_status_display }}</span>
+                                <span class="badge badge-{{ order.status|lower }}">{{ order.get_status_display }}</span>
                             </a>
                             {% endfor %}
                         </div>
                         {% else %}
-                        <p class="text-muted text-center py-3">لا توجد أوامر</p>
+                        <div class="empty-state">
+                            <i class="bi bi-inbox"></i>
+                            لا توجد أوامر
+                        </div>
                         {% endif %}
                     </div>
-                    <div class="card-footer">
-                        <a href="{% url 'order_list' %}" class="btn btn-dark btn-sm">عرض الكل</a>
+                    <div class="card-footer bg-transparent">
+                        <a href="{% url 'order_list' %}" class="btn btn-navy btn-sm">عرض الكل</a>
                     </div>
                 </div>
             </div>
             <div class="col-md-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-header bg-warning text-dark">
+                <div class="card card-accent h-100">
+                    <div class="card-header card-header-gold">
                         <i class="bi bi-hourglass-split"></i> بانتظار الاعتماد
                     </div>
                     <div class="card-body">
@@ -193,7 +245,10 @@
                             {% endfor %}
                         </div>
                         {% else %}
-                        <p class="text-muted text-center py-3">لا توجد أوامر بانتظار الاعتماد</p>
+                        <div class="empty-state">
+                            <i class="bi bi-check-all"></i>
+                            لا توجد أوامر بانتظار الاعتماد
+                        </div>
                         {% endif %}
                     </div>
                 </div>
@@ -202,14 +257,14 @@
         </div>
 
         <!-- Recent Activity -->
-        <div class="card">
-            <div class="card-header">
+        <div class="card card-accent">
+            <div class="card-header card-header-navy">
                 <i class="bi bi-activity"></i> النشاط الأخير
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 {% if recent_activity %}
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-hover table-gov mb-0">
                         <thead>
                             <tr>
                                 <th>رقم الأمر</th>
@@ -222,10 +277,10 @@
                         <tbody>
                             {% for order in recent_activity %}
                             <tr>
-                                <td><a href="{% url 'order_detail' order.pk %}">{{ order.order_number }}</a></td>
+                                <td><a href="{% url 'order_detail' order.pk %}" style="color: var(--navy); font-weight: 600;">{{ order.order_number }}</a></td>
                                 <td>{{ order.prosecution.name }}</td>
                                 <td>{{ order.get_service_type_display }}</td>
-                                <td><span class="badge bg-secondary">{{ order.get_status_display }}</span></td>
+                                <td><span class="badge badge-{{ order.status|lower }}">{{ order.get_status_display }}</span></td>
                                 <td>{{ order.updated_at|date:"Y/m/d H:i" }}</td>
                             </tr>
                             {% endfor %}
@@ -233,7 +288,10 @@
                     </table>
                 </div>
                 {% else %}
-                <p class="text-muted text-center py-3">لا يوجد نشاط حديث</p>
+                <div class="empty-state">
+                    <i class="bi bi-clock-history"></i>
+                    لا يوجد نشاط حديث
+                </div>
                 {% endif %}
             </div>
         </div>
