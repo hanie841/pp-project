@@ -20,6 +20,10 @@ urlpatterns = [
     path('orders/<int:pk>/conference/create/', views.conference_create, name='conference_create'),
     path('orders/<int:pk>/conference/', views.conference_join, name='conference_join'),
     path('orders/<int:pk>/conference/token/', views.conference_token_api, name='conference_token_api'),
+    path('orders/<int:pk>/conference/recording/start/', views.recording_start, name='recording_start'),
+    path('orders/<int:pk>/conference/recording/stop/', views.recording_stop, name='recording_stop'),
+    path('orders/<int:pk>/conference/recording/status/', views.recording_status, name='recording_status'),
+    path('orders/<int:pk>/recordings/<int:rec_pk>/download/', views.recording_download, name='recording_download'),
     # Contract Manager
     path('orders/<int:pk>/cm-accept/', views.cm_accept_order, name='cm_accept_order'),
     path('orders/<int:pk>/assign/', views.cm_assign_translators, name='cm_assign_translators'),

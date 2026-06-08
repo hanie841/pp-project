@@ -13,6 +13,7 @@ from .models import (
     WorkOrderApproval, CompletionCertificate,
     Prosecution, Prosecutor, Language, UserProfile,
     TranslatorProfile, OrderAssignment, WorkflowConfig,
+    ConferenceRecording,
 )
 from .forms import (
     WorkOrderForm, WorkOrderLanguageFormSet,
@@ -25,7 +26,10 @@ from .signals import (
     notify_translator_assigned, notify_assignment_accepted,
     notify_assignment_declined, notify_all_assignments_completed,
 )
-from .livekit_utils import create_room, generate_join_token
+from .livekit_utils import (
+    create_room, generate_join_token,
+    start_room_recording, stop_recording, list_egress,
+)
 
 
 def login_view(request):
@@ -223,6 +227,9 @@ def order_detail(request, pk):
         'translator', 'language_line', 'language_line__language'
     ).all()
     config = WorkflowConfig.get_config()
+    recordings = order.recordings.filter(
+        status=ConferenceRecording.Status.COMPLETED
+    )
 
     return render(request, 'orders/detail.html', {
         'order': order,
@@ -230,6 +237,7 @@ def order_detail(request, pk):
         'meeting_link_form': meeting_link_form,
         'assignments': assignments,
         'workflow_mode': config.mode,
+        'recordings': recordings,
     })
 
 
@@ -898,12 +906,15 @@ def conference_join(request, pk):
         order.conference_room, participant_name, participant_identity,
     )
 
+    can_manage = _can_manage_conference(request.user, profile)
+
     return render(request, 'orders/conference.html', {
         'order': order,
         'ws_url': settings.LIVEKIT_WS_URL,
         'token': token,
         'room_name': order.conference_room,
         'profile': profile,
+        'can_manage': can_manage,
     })
 
 
@@ -925,3 +936,157 @@ def conference_token_api(request, pk):
         order.conference_room, participant_name, participant_identity,
     )
     return JsonResponse({'token': token})
+
+
+# ── Recording Views ──────────────────────────────────────────────────
+
+@login_required
+def recording_start(request, pk):
+    """Start recording the conference session."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    order = get_object_or_404(WorkOrder, pk=pk)
+    profile = _get_profile(request.user)
+
+    if not _can_manage_conference(request.user, profile):
+        return JsonResponse({'error': 'غير مسموح'}, status=403)
+
+    if not order.conference_room:
+        return JsonResponse({'error': 'لا توجد غرفة اجتماع'}, status=404)
+
+    # Check no active recording exists
+    active = order.recordings.filter(
+        status__in=[ConferenceRecording.Status.RECORDING,
+                    ConferenceRecording.Status.STOPPING]
+    ).exists()
+    if active:
+        return JsonResponse({'error': 'يوجد تسجيل نشط بالفعل'}, status=409)
+
+    result = start_room_recording(order.conference_room)
+    if not result:
+        return JsonResponse({'error': 'فشل بدء التسجيل'}, status=502)
+
+    recording = ConferenceRecording.objects.create(
+        work_order=order,
+        egress_id=result['egress_id'],
+        room_name=order.conference_room,
+        file_path=result['file_path'],
+        started_by=request.user,
+    )
+
+    return JsonResponse({
+        'ok': True,
+        'recording_id': recording.pk,
+        'egress_id': recording.egress_id,
+    })
+
+
+@login_required
+def recording_stop(request, pk):
+    """Stop the active conference recording."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    order = get_object_or_404(WorkOrder, pk=pk)
+    profile = _get_profile(request.user)
+
+    if not _can_manage_conference(request.user, profile):
+        return JsonResponse({'error': 'غير مسموح'}, status=403)
+
+    recording = order.recordings.filter(
+        status=ConferenceRecording.Status.RECORDING
+    ).first()
+    if not recording:
+        return JsonResponse({'error': 'لا يوجد تسجيل نشط'}, status=404)
+
+    success = stop_recording(recording.egress_id)
+    if not success:
+        return JsonResponse({'error': 'فشل إيقاف التسجيل'}, status=502)
+
+    recording.status = ConferenceRecording.Status.STOPPING
+    recording.stopped_at = timezone.now()
+    recording.save()
+
+    return JsonResponse({'ok': True})
+
+
+@login_required
+def recording_status(request, pk):
+    """Return the current recording status (polled by all participants)."""
+    order = get_object_or_404(WorkOrder, pk=pk)
+    profile = _get_profile(request.user)
+
+    if not _can_join_conference(request.user, profile, order):
+        return JsonResponse({'error': 'غير مسموح'}, status=403)
+
+    recording = order.recordings.filter(
+        status__in=[ConferenceRecording.Status.RECORDING,
+                    ConferenceRecording.Status.STOPPING]
+    ).first()
+
+    if not recording:
+        return JsonResponse({'recording': False})
+
+    # For STOPPING recordings, check egress API to detect completion
+    if recording.status == ConferenceRecording.Status.STOPPING:
+        items = list_egress(order.conference_room)
+        still_active = any(
+            item.get('egress_id') == recording.egress_id
+            for item in items
+        )
+        if not still_active:
+            recording.status = ConferenceRecording.Status.COMPLETED
+            # Try to get file size
+            import os
+            full_path = os.path.join(
+                settings.RECORDING_ROOT, recording.file_path
+            )
+            if os.path.exists(full_path):
+                recording.file_size = os.path.getsize(full_path)
+            recording.save()
+            return JsonResponse({'recording': False})
+
+    return JsonResponse({
+        'recording': True,
+        'status': recording.status,
+        'started_at': recording.started_at.isoformat(),
+    })
+
+
+@login_required
+def recording_download(request, pk, rec_pk):
+    """Download a completed recording file."""
+    import os
+    order = get_object_or_404(WorkOrder, pk=pk)
+    profile = _get_profile(request.user)
+
+    if not _can_join_conference(request.user, profile, order):
+        return HttpResponseForbidden('غير مسموح')
+
+    recording = get_object_or_404(
+        ConferenceRecording, pk=rec_pk, work_order=order,
+        status=ConferenceRecording.Status.COMPLETED,
+    )
+
+    full_path = os.path.join(settings.RECORDING_ROOT, recording.file_path)
+    filename = os.path.basename(recording.file_path)
+
+    # Use nginx X-Accel-Redirect in production
+    if not settings.DEBUG:
+        response = HttpResponse()
+        response['X-Accel-Redirect'] = f'/internal-recordings/{recording.file_path}'
+        response['Content-Type'] = 'video/mp4'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    # Dev fallback: serve via Django
+    from django.http import FileResponse
+    if not os.path.exists(full_path):
+        return HttpResponse('الملف غير موجود', status=404)
+    return FileResponse(
+        open(full_path, 'rb'),
+        content_type='video/mp4',
+        as_attachment=True,
+        filename=filename,
+    )

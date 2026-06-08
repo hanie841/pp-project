@@ -6,6 +6,7 @@ from .models import (
     WorkOrder, WorkOrderLanguage, ServiceRecord,
     WorkOrderApproval, CompletionCertificate,
     TranslatorProfile, OrderAssignment, WorkflowConfig,
+    ConferenceRecording,
 )
 
 
@@ -79,6 +80,13 @@ class CompletionCertificateInline(admin.StackedInline):
     readonly_fields = ('certificate_number', 'generated_at')
 
 
+class ConferenceRecordingInline(admin.TabularInline):
+    model = ConferenceRecording
+    extra = 0
+    fields = ('egress_id', 'room_name', 'status', 'file_path', 'file_size', 'started_by', 'started_at', 'stopped_at')
+    readonly_fields = ('egress_id', 'room_name', 'file_path', 'file_size', 'started_by', 'started_at', 'stopped_at')
+
+
 class OrderAssignmentInline(admin.TabularInline):
     model = OrderAssignment
     extra = 0
@@ -93,7 +101,7 @@ class WorkOrderAdmin(admin.ModelAdmin):
     list_filter = ('status', 'service_type', 'prosecution')
     search_fields = ('order_number', 'custom_prosecutor_name')
     list_editable = ('status',)
-    inlines = [WorkOrderLanguageInline, OrderAssignmentInline, ServiceRecordInline, WorkOrderApprovalInline, CompletionCertificateInline]
+    inlines = [WorkOrderLanguageInline, OrderAssignmentInline, ServiceRecordInline, WorkOrderApprovalInline, CompletionCertificateInline, ConferenceRecordingInline]
     readonly_fields = ('order_number', 'created_at', 'updated_at', 'submitted_at')
     fieldsets = (
         ('معلومات الطلب', {
@@ -168,6 +176,15 @@ class WorkflowConfigAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(ConferenceRecording)
+class ConferenceRecordingAdmin(admin.ModelAdmin):
+    list_display = ('work_order', 'room_name', 'status', 'started_by', 'started_at', 'stopped_at', 'file_size')
+    list_filter = ('status',)
+    search_fields = ('work_order__order_number', 'room_name', 'egress_id')
+    readonly_fields = ('egress_id', 'room_name', 'file_path', 'file_size', 'started_by', 'started_at', 'stopped_at')
+    raw_id_fields = ('work_order',)
 
 
 admin.site.site_header = 'بوابة خدمات الترجمة - النيابة العامة الاتحادية'

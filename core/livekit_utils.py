@@ -71,3 +71,82 @@ def generate_join_token(room_name, participant_name, participant_identity):
         },
     }
     return jwt.encode(claims, settings.LIVEKIT_API_SECRET, algorithm='HS256')
+
+
+# ── Egress (Recording) API ───────────────────────────────────────────
+
+def start_room_recording(room_name):
+    """Start a room composite egress recording.
+
+    Returns dict with egress_id and file_path on success, None on failure.
+    """
+    url = f'{settings.LIVEKIT_HTTP_URL}/twirp/livekit.Egress/StartRoomCompositeEgress'
+    token = _make_api_token(grants={'roomRecord': True})
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json',
+    }
+    timestamp = int(time.time())
+    file_path = f'pp-portal/{room_name}-{timestamp}.mp4'
+    payload = {
+        'room_name': room_name,
+        'file': {
+            'filepath': file_path,
+        },
+    }
+    try:
+        resp = requests.post(url, json=payload, headers=headers, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+        return {
+            'egress_id': data.get('egress_id', ''),
+            'file_path': file_path,
+        }
+    except Exception as e:
+        logger.error(f'LiveKit start_room_recording failed for {room_name}: {e}')
+        return None
+
+
+def stop_recording(egress_id):
+    """Stop an active egress recording.
+
+    Returns True on success, False on failure.
+    """
+    url = f'{settings.LIVEKIT_HTTP_URL}/twirp/livekit.Egress/StopEgress'
+    token = _make_api_token(grants={'roomRecord': True})
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json',
+    }
+    payload = {'egress_id': egress_id}
+    try:
+        resp = requests.post(url, json=payload, headers=headers, timeout=15)
+        resp.raise_for_status()
+        return True
+    except Exception as e:
+        logger.error(f'LiveKit stop_recording failed for {egress_id}: {e}')
+        return False
+
+
+def list_egress(room_name=None):
+    """List active egress items, optionally filtered by room name.
+
+    Returns list of egress dicts on success, empty list on failure.
+    """
+    url = f'{settings.LIVEKIT_HTTP_URL}/twirp/livekit.Egress/ListEgress'
+    token = _make_api_token(grants={'roomRecord': True})
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json',
+    }
+    payload = {}
+    if room_name:
+        payload['room_name'] = room_name
+    try:
+        resp = requests.post(url, json=payload, headers=headers, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get('items', [])
+    except Exception as e:
+        logger.error(f'LiveKit list_egress failed: {e}')
+        return []

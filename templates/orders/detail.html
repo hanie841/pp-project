@@ -319,6 +319,47 @@
         </div>
         {% endif %}
 
+        <!-- Recordings -->
+        {% if recordings %}
+        <div class="card card-accent mt-4">
+            <div class="card-header card-header-navy">
+                <i class="bi bi-film"></i> تسجيلات الاجتماع
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover table-gov mb-0">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>الحجم</th>
+                            <th>الحالة</th>
+                            <th>تحميل</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rec in recordings %}
+                        <tr>
+                            <td>{{ rec.started_at|date:"Y/m/d H:i" }}</td>
+                            <td>
+                                {% if rec.file_size %}
+                                    {% widthratio rec.file_size 1048576 1 %} MB
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-success">مكتمل</span></td>
+                            <td>
+                                <a href="{% url 'recording_download' order.pk rec.pk %}" class="btn btn-sm btn-navy">
+                                    <i class="bi bi-download"></i> تحميل
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Meeting Link -->
         {% if meeting_link_form or user.is_superuser and order.location_type == 'NEED_LINK' and order.status in 'SUBMITTED,ACCEPTED' %}
         <div class="card card-accent mt-4">

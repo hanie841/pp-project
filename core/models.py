@@ -524,3 +524,39 @@ class WorkflowConfig(models.Model):
     def get_config(cls):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+
+class ConferenceRecording(models.Model):
+    """تسجيل اجتماع مرئي - Conference session recording"""
+    class Status(models.TextChoices):
+        RECORDING = 'RECORDING', 'جاري التسجيل'
+        STOPPING = 'STOPPING', 'جاري الإيقاف'
+        COMPLETED = 'COMPLETED', 'مكتمل'
+        FAILED = 'FAILED', 'فشل'
+
+    work_order = models.ForeignKey(
+        WorkOrder, on_delete=models.CASCADE,
+        related_name='recordings', verbose_name='أمر التكليف'
+    )
+    egress_id = models.CharField('معرف التسجيل', max_length=100, unique=True)
+    room_name = models.CharField('اسم الغرفة', max_length=100)
+    file_path = models.CharField('مسار الملف', max_length=500, blank=True)
+    file_size = models.BigIntegerField('حجم الملف', null=True, blank=True)
+    status = models.CharField(
+        'الحالة', max_length=20, choices=Status.choices,
+        default=Status.RECORDING
+    )
+    started_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, verbose_name='بدأ بواسطة'
+    )
+    started_at = models.DateTimeField('تاريخ البدء', auto_now_add=True)
+    stopped_at = models.DateTimeField('تاريخ الإيقاف', null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'تسجيل اجتماع'
+        verbose_name_plural = 'تسجيلات الاجتماعات'
+        ordering = ['-started_at']
+
+    def __str__(self):
+        return f'{self.work_order.order_number} - {self.started_at}'

@@ -85,6 +85,46 @@
         font-size: 0.9rem;
         color: #666;
     }
+    /* Recording indicator */
+    #recording-indicator {
+        display: none;
+        position: fixed;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #dc3545;
+        color: #fff;
+        padding: 6px 18px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        z-index: 1050;
+        animation: pulse-rec 1.5s infinite;
+        box-shadow: 0 2px 8px rgba(220,53,69,0.4);
+    }
+    #recording-indicator .rec-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        background: #fff;
+        border-radius: 50%;
+        margin-left: 8px;
+        vertical-align: middle;
+    }
+    @keyframes pulse-rec {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+    /* Record button states */
+    .ctrl-btn-rec {
+        background: #1B2A4A;
+        color: #dc3545;
+    }
+    .ctrl-btn-rec-active {
+        background: #dc3545;
+        color: #fff;
+        animation: pulse-rec 1.5s infinite;
+    }
     @media (max-width: 576px) {
         #video-grid {
             grid-template-columns: 1fr;
@@ -110,6 +150,10 @@
             </a>
         </div>
 
+        <div id="recording-indicator">
+            <span class="rec-dot"></span> جاري التسجيل
+        </div>
+
         <div id="conference-container" class="card card-accent">
             <div id="status-msg">جاري الاتصال بغرفة الاجتماع...</div>
             <div id="video-grid"></div>
@@ -120,6 +164,11 @@
                 <button class="ctrl-btn ctrl-btn-on" id="btn-cam" title="الكاميرا">
                     <i class="bi bi-camera-video-fill"></i>
                 </button>
+                {% if can_manage %}
+                <button class="ctrl-btn ctrl-btn-rec" id="btn-rec" title="تسجيل">
+                    <i class="bi bi-record-circle"></i>
+                </button>
+                {% endif %}
                 <button class="ctrl-btn ctrl-btn-leave" id="btn-leave" title="مغادرة">
                     <i class="bi bi-telephone-x-fill"></i>
                     مغادرة
@@ -314,6 +363,72 @@
         }
         window.location.href = DETAIL_URL;
     });
+
+    // ── Recording ─────────────────────────────────────
+    const recIndicator = document.getElementById('recording-indicator');
+    const btnRec = document.getElementById('btn-rec');
+    let isRecording = false;
+    let recBusy = false;  // prevent double-clicks
+
+    const CSRF_TOKEN = '{{ csrf_token }}';
+    const REC_START_URL = '{% url "recording_start" order.pk %}';
+    const REC_STOP_URL  = '{% url "recording_stop" order.pk %}';
+    const REC_STATUS_URL = '{% url "recording_status" order.pk %}';
+
+    function updateRecordingUI(active) {
+        isRecording = active;
+        recIndicator.style.display = active ? 'block' : 'none';
+        if (btnRec) {
+            btnRec.className = 'ctrl-btn ' + (active ? 'ctrl-btn-rec-active' : 'ctrl-btn-rec');
+            btnRec.innerHTML = active
+                ? '<i class="bi bi-stop-circle-fill"></i>'
+                : '<i class="bi bi-record-circle"></i>';
+            btnRec.title = active ? 'إيقاف التسجيل' : 'تسجيل';
+        }
+    }
+
+    async function checkRecordingStatus() {
+        try {
+            const resp = await fetch(REC_STATUS_URL);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            updateRecordingUI(data.recording);
+        } catch (e) {
+            // ignore polling errors
+        }
+    }
+
+    if (btnRec) {
+        btnRec.addEventListener('click', async () => {
+            if (recBusy) return;
+            recBusy = true;
+            try {
+                const url = isRecording ? REC_STOP_URL : REC_START_URL;
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': CSRF_TOKEN,
+                        'Content-Type': 'application/json',
+                    },
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    updateRecordingUI(!isRecording);
+                } else if (data.error) {
+                    alert(data.error);
+                }
+            } catch (e) {
+                console.error('Recording toggle error:', e);
+            } finally {
+                recBusy = false;
+            }
+        });
+    }
+
+    // Poll recording status every 5 seconds (all participants)
+    setInterval(checkRecordingStatus, 5000);
+    // Initial check
+    checkRecordingStatus();
 
     // Start
     connect();

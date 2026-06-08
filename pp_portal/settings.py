@@ -130,3 +130,6 @@ LIVEKIT_API_KEY = os.environ.get('LIVEKIT_API_KEY', '')
 LIVEKIT_API_SECRET = os.environ.get('LIVEKIT_API_SECRET', '')
 LIVEKIT_WS_URL = os.environ.get('LIVEKIT_WS_URL', 'wss://livekit.askafnan.com')
 LIVEKIT_HTTP_URL = os.environ.get('LIVEKIT_HTTP_URL', 'http://127.0.0.1:7880')
+
+# Recording storage (egress container writes here)
+RECORDING_ROOT = os.environ.get('RECORDING_ROOT', '/var/www/gfad-portal/storage/app/recordings')
