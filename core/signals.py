@@ -1,9 +1,14 @@
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage
 from django.conf import settings
+from django.template.loader import render_to_string
 from .models import UserProfile
 import logging
+import os
+import base64
 
 logger = logging.getLogger(__name__)
+
+COMPANY_EMAIL = 'info@swlt.ae'
 
 
 def _get_emails_by_role(role):
@@ -14,25 +19,116 @@ def _get_emails_by_role(role):
     )
 
 
-def _send(subject, message, recipients):
+def _send(subject, message, recipients, attachments=None):
+    """Send email with optional attachments.
+    attachments: list of (filename, content_bytes, mime_type) tuples
+    """
+    # Always include company email
+    if COMPANY_EMAIL not in recipients:
+        recipients.append(COMPANY_EMAIL)
+    recipients = list(set(recipients))
     if not recipients:
         return
     try:
-        send_mail(
+        email = EmailMessage(
             subject=subject,
-            message=message,
+            body=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=recipients,
-            fail_silently=True,
+            to=recipients,
         )
+        if attachments:
+            for filename, content, mime_type in attachments:
+                email.attach(filename, content, mime_type)
+        email.send(fail_silently=True)
     except Exception as e:
         logger.error(f'Email send failed: {e}')
 
 
+def _generate_order_pdf(order):
+    """Generate work order PDF bytes, returns (filename, bytes, mime) or None."""
+    try:
+        static_dir = settings.STATICFILES_DIRS[0] if settings.STATICFILES_DIRS else settings.STATIC_ROOT
+        pp_logo_file = os.path.join(static_dir, 'images', 'pp_logo.png')
+        uae_emblem_file = os.path.join(static_dir, 'images', 'uae_emblem.png')
+        with open(pp_logo_file, 'rb') as f:
+            pp_logo_b64 = base64.b64encode(f.read()).decode()
+        with open(uae_emblem_file, 'rb') as f:
+            uae_emblem_b64 = base64.b64encode(f.read()).decode()
+
+        lang_lines = order.languages.select_related('language').all()
+        context = {
+            'order': order,
+            'lang_lines': lang_lines,
+            'contract_number': settings.CONTRACT_NUMBER,
+            'pp_logo_data': f'data:image/png;base64,{pp_logo_b64}',
+            'uae_emblem_data': f'data:image/png;base64,{uae_emblem_b64}',
+        }
+        html = render_to_string('pdf/work_order.html', context)
+
+        try:
+            from weasyprint import HTML
+            pdf_bytes = HTML(string=html).write_pdf()
+            filename = f'work_order_{order.order_number.replace("/", "_")}.pdf'
+            return (filename, pdf_bytes, 'application/pdf')
+        except ImportError:
+            # WeasyPrint not available — attach HTML instead
+            filename = f'work_order_{order.order_number.replace("/", "_")}.html'
+            return (filename, html.encode('utf-8'), 'text/html')
+    except Exception as e:
+        logger.error(f'PDF generation failed for order {order.order_number}: {e}')
+        return None
+
+
+def _generate_certificate_pdf(order):
+    """Generate completion certificate PDF bytes, returns (filename, bytes, mime) or None."""
+    try:
+        certificate = order.certificate
+    except Exception:
+        return None
+
+    try:
+        static_dir = settings.STATICFILES_DIRS[0] if settings.STATICFILES_DIRS else settings.STATIC_ROOT
+        pp_logo_file = os.path.join(static_dir, 'images', 'pp_logo.png')
+        uae_emblem_file = os.path.join(static_dir, 'images', 'uae_emblem.png')
+        with open(pp_logo_file, 'rb') as f:
+            pp_logo_b64 = base64.b64encode(f.read()).decode()
+        with open(uae_emblem_file, 'rb') as f:
+            uae_emblem_b64 = base64.b64encode(f.read()).decode()
+
+        service_records = order.service_records.select_related('language').all()
+        context = {
+            'order': order,
+            'certificate': certificate,
+            'service_records': service_records,
+            'contract_number': settings.CONTRACT_NUMBER,
+            'pp_logo_data': f'data:image/png;base64,{pp_logo_b64}',
+            'uae_emblem_data': f'data:image/png;base64,{uae_emblem_b64}',
+        }
+        html = render_to_string('pdf/certificate.html', context)
+
+        try:
+            from weasyprint import HTML
+            pdf_bytes = HTML(string=html).write_pdf()
+            filename = f'certificate_{certificate.certificate_number.replace("/", "_")}.pdf'
+            return (filename, pdf_bytes, 'application/pdf')
+        except ImportError:
+            filename = f'certificate_{certificate.certificate_number.replace("/", "_")}.html'
+            return (filename, html.encode('utf-8'), 'text/html')
+    except Exception as e:
+        logger.error(f'Certificate PDF generation failed for order {order.order_number}: {e}')
+        return None
+
+
 def notify_new_order(order):
-    # Send to both SmartWorld admins and contract managers
+    """New order submitted — notify SmartWorld + CM with work order PDF attached."""
     recipients = _get_emails_by_role(UserProfile.Role.SMARTWORLD_ADMIN)
     recipients.extend(_get_emails_by_role(UserProfile.Role.CONTRACT_MANAGER))
+
+    attachments = []
+    pdf = _generate_order_pdf(order)
+    if pdf:
+        attachments.append(pdf)
+
     _send(
         subject=f'أمر تكليف جديد: {order.order_number}',
         message=(
@@ -40,8 +136,10 @@ def notify_new_order(order):
             f'النيابة: {order.prosecution.name}\n'
             f'نوع الخدمة: {order.get_service_type_display()}\n'
             f'تاريخ التنفيذ: {order.execution_date}\n'
+            f'\nالمرفقات: أمر التكليف'
         ),
         recipients=list(set(recipients)),
+        attachments=attachments,
     )
 
 
@@ -82,15 +180,24 @@ def notify_actuals_logged(order):
 
 
 def notify_pp_approved(order):
+    """Order approved — notify with completion certificate attached."""
     recipients = _get_emails_by_role(UserProfile.Role.SMARTWORLD_ADMIN)
     recipients.extend(_get_emails_by_role(UserProfile.Role.CONTRACT_MANAGER))
+
+    attachments = []
+    cert_pdf = _generate_certificate_pdf(order)
+    if cert_pdf:
+        attachments.append(cert_pdf)
+
     _send(
-        subject=f'تم اعتماد أمر التكليف: {order.order_number}',
+        subject=f'تم اعتماد أمر التكليف: {order.order_number} - نموذج الإنجاز',
         message=(
             f'تم اعتماد أمر التكليف رقم {order.order_number} من قبل النيابة.\n'
-            f'شهادة الإنجاز جاهزة.'
+            f'شهادة الإنجاز جاهزة.\n'
+            f'\nالمرفقات: نموذج الإنجاز (شهادة إنجاز)'
         ),
         recipients=list(set(recipients)),
+        attachments=attachments,
     )
 
 
