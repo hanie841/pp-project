@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% load arabic_filters %}
+
+{% block title %}مهامي - بوابة خدمات الترجمة{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="page-header">
+            <h3><i class="bi bi-clipboard-check"></i> مهامي</h3>
+            {% if workflow_mode == 'AUTO' %}
+            <a href="{% url 'translator_available_orders' %}" class="btn btn-navy btn-sm">
+                <i class="bi bi-search"></i> الأوامر المتاحة
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Stats -->
+        <div class="row g-3 mb-4">
+            <div class="col-4">
+                <div class="stat-card stat-card-warning">
+                    <div class="stat-icon"><i class="bi bi-bell"></i></div>
+                    <div class="stat-number">{{ pending_assignments.count|default:"0" }}</div>
+                    <div class="stat-label">بانتظار القبول</div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="stat-card stat-card-info">
+                    <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+                    <div class="stat-number">{{ active_assignments.count|default:"0" }}</div>
+                    <div class="stat-label">قيد التنفيذ</div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="stat-card stat-card-success">
+                    <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
+                    <div class="stat-number">{{ completed_assignments.count|default:"0" }}</div>
+                    <div class="stat-label">مكتملة</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Pending Assignments -->
+            <div class="col-md-6 mb-4">
+                <div class="card card-accent h-100">
+                    <div class="card-header card-header-navy">
+                        <i class="bi bi-bell-fill"></i> تعيينات بانتظار القبول
+                    </div>
+                    <div class="card-body">
+                        {% if pending_assignments %}
+                        <div class="list-group list-group-flush">
+                            {% for a in pending_assignments %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <strong>{{ a.work_order.order_number }}</strong>
+                                        <br><small class="text-muted">{{ a.language_line.language_display }} - {{ a.work_order.get_service_type_display }}</small>
+                                        <br><small class="text-muted">{{ a.work_order.prosecution.name }}</small>
+                                        <br><small class="text-muted">تاريخ التنفيذ: {{ a.work_order.execution_date|date:"Y/m/d" }}</small>
+                                    </div>
+                                    <span class="badge" style="background: #F9A825; color: #333;">بانتظار القبول</span>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <form method="post" action="{% url 'assignment_accept' a.pk %}">
+                                        {% csrf_token %}
+                                        <button class="btn btn-success btn-sm"><i class="bi bi-check-lg"></i> قبول</button>
+                                    </form>
+                                    <form method="post" action="{% url 'assignment_decline' a.pk %}">
+                                        {% csrf_token %}
+                                        <button class="btn btn-outline-danger btn-sm"><i class="bi bi-x-lg"></i> رفض</button>
+                                    </form>
+                                    <a href="{% url 'order_detail' a.work_order.pk %}" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-eye"></i> عرض
+                                    </a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="empty-state">
+                            <i class="bi bi-bell-slash"></i>
+                            لا توجد تعيينات جديدة
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Assignments -->
+            <div class="col-md-6 mb-4">
+                <div class="card card-accent h-100">
+                    <div class="card-header card-header-gold">
+                        <i class="bi bi-pencil-square"></i> مهام قيد التنفيذ
+                    </div>
+                    <div class="card-body">
+                        {% if active_assignments %}
+                        <div class="list-group list-group-flush">
+                            {% for a in active_assignments %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <strong>{{ a.work_order.order_number }}</strong>
+                                        <br><small class="text-muted">{{ a.language_line.language_display }} - {{ a.work_order.get_service_type_display }}</small>
+                                        <br><small class="text-muted">{{ a.work_order.prosecution.name }}</small>
+                                    </div>
+                                    <span class="badge bg-primary">مقبول</span>
+                                </div>
+                                <a href="{% url 'translator_log_service' a.pk %}" class="btn btn-navy btn-sm">
+                                    <i class="bi bi-pencil-square"></i> تسجيل الخدمة
+                                </a>
+                                <a href="{% url 'order_detail' a.work_order.pk %}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-eye"></i> عرض
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="empty-state">
+                            <i class="bi bi-clipboard-check"></i>
+                            لا توجد مهام قيد التنفيذ
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completed Assignments -->
+        {% if completed_assignments %}
+        <div class="card card-accent">
+            <div class="card-header" style="background: #2E7D32; color: #fff; border: none;">
+                <i class="bi bi-check-circle-fill"></i> المهام المكتملة
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover table-gov mb-0">
+                    <thead>
+                        <tr>
+                            <th>رقم الأمر</th>
+                            <th>اللغة</th>
+                            <th>نوع الخدمة</th>
+                            <th>تاريخ الإنجاز</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in completed_assignments %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'order_detail' a.work_order.pk %}" style="color: var(--navy); font-weight: 600;">
+                                    {{ a.work_order.order_number }}
+                                </a>
+                            </td>
+                            <td>{{ a.language_line.language_display }}</td>
+                            <td>{{ a.work_order.get_service_type_display }}</td>
+                            <td>{% if a.completed_at %}{{ a.completed_at|date:"Y/m/d H:i" }}{% else %}-{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

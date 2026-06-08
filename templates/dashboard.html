@@ -200,39 +200,57 @@
 
             {% elif profile and profile.is_contract_manager %}
             <!-- Contract Manager Dashboard -->
-            <div class="col-md-6 mb-4">
+            <div class="col-md-4 mb-4">
                 <div class="card card-accent h-100">
                     <div class="card-header card-header-navy">
-                        <i class="bi bi-list-check"></i> جميع أوامر التكليف
+                        <i class="bi bi-inbox-fill"></i> أوامر واردة
                     </div>
                     <div class="card-body">
-                        {% if all_orders %}
+                        {% if incoming_orders %}
                         <div class="list-group list-group-flush">
-                            {% for order in all_orders %}
-                            <a href="{% url 'order_detail' order.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between">
-                                <div>
-                                    <strong>{{ order.order_number }}</strong>
-                                    <br><small>{{ order.prosecution.name }}</small>
-                                </div>
-                                <span class="badge badge-{{ order.status|lower }}">{{ order.get_status_display }}</span>
+                            {% for order in incoming_orders %}
+                            <a href="{% url 'order_detail' order.pk %}" class="list-group-item list-group-item-action">
+                                <strong>{{ order.order_number }}</strong>
+                                <br><small>{{ order.prosecution.name }} - {{ order.get_service_type_display }}</small>
                             </a>
                             {% endfor %}
                         </div>
                         {% else %}
                         <div class="empty-state">
                             <i class="bi bi-inbox"></i>
-                            لا توجد أوامر
+                            لا توجد أوامر واردة
                         </div>
                         {% endif %}
                     </div>
-                    <div class="card-footer bg-transparent">
-                        <a href="{% url 'order_list' %}" class="btn btn-navy btn-sm">عرض الكل</a>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card card-accent h-100">
+                    <div class="card-header card-header-gold">
+                        <i class="bi bi-people-fill"></i> تعيين المترجمين
+                    </div>
+                    <div class="card-body">
+                        {% if to_assign %}
+                        <div class="list-group list-group-flush">
+                            {% for order in to_assign %}
+                            <a href="{% url 'cm_assign_translators' order.pk %}" class="list-group-item list-group-item-action">
+                                <strong>{{ order.order_number }}</strong>
+                                <br><small>{{ order.prosecution.name }}</small>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="empty-state">
+                            <i class="bi bi-clipboard-check"></i>
+                            لا توجد أوامر لتعيين المترجمين
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 mb-4">
+            <div class="col-md-4 mb-4">
                 <div class="card card-accent h-100">
-                    <div class="card-header card-header-gold">
+                    <div class="card-header" style="background: #F9A825; color: #333; border: none;">
                         <i class="bi bi-hourglass-split"></i> بانتظار الاعتماد
                     </div>
                     <div class="card-body">
@@ -251,6 +269,101 @@
                         </div>
                         {% endif %}
                     </div>
+                </div>
+            </div>
+
+            {% elif profile and profile.is_translator %}
+            <!-- Translator Dashboard -->
+            <div class="col-md-4 mb-4">
+                <div class="card card-accent h-100">
+                    <div class="card-header card-header-navy">
+                        <i class="bi bi-bell-fill"></i> تعيينات بانتظار القبول
+                    </div>
+                    <div class="card-body">
+                        {% if pending_assignments %}
+                        <div class="list-group list-group-flush">
+                            {% for a in pending_assignments %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong>{{ a.work_order.order_number }}</strong>
+                                    <span class="badge" style="background: #F9A825; color: #333;">بانتظار القبول</span>
+                                </div>
+                                <small class="text-muted">{{ a.language_line.language_display }} - {{ a.work_order.get_service_type_display }}</small>
+                                <div class="mt-2">
+                                    <form method="post" action="{% url 'assignment_accept' a.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button class="btn btn-success btn-sm"><i class="bi bi-check-lg"></i> قبول</button>
+                                    </form>
+                                    <form method="post" action="{% url 'assignment_decline' a.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button class="btn btn-outline-danger btn-sm"><i class="bi bi-x-lg"></i> رفض</button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="empty-state">
+                            <i class="bi bi-bell-slash"></i>
+                            لا توجد تعيينات جديدة
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card card-accent h-100">
+                    <div class="card-header card-header-gold">
+                        <i class="bi bi-pencil-square"></i> مهام قيد التنفيذ
+                    </div>
+                    <div class="card-body">
+                        {% if active_assignments %}
+                        <div class="list-group list-group-flush">
+                            {% for a in active_assignments %}
+                            <a href="{% url 'translator_log_service' a.pk %}" class="list-group-item list-group-item-action">
+                                <strong>{{ a.work_order.order_number }}</strong>
+                                <br><small>{{ a.language_line.language_display }} - {{ a.work_order.get_service_type_display }}</small>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="empty-state">
+                            <i class="bi bi-clipboard-check"></i>
+                            لا توجد مهام قيد التنفيذ
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card card-accent h-100">
+                    <div class="card-header" style="background: #2E7D32; color: #fff; border: none;">
+                        <i class="bi bi-check-circle-fill"></i> مهام مكتملة
+                    </div>
+                    <div class="card-body">
+                        {% if completed_assignments %}
+                        <div class="list-group list-group-flush">
+                            {% for a in completed_assignments %}
+                            <a href="{% url 'order_detail' a.work_order.pk %}" class="list-group-item list-group-item-action">
+                                <strong>{{ a.work_order.order_number }}</strong>
+                                <br><small>{{ a.language_line.language_display }}</small>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="empty-state">
+                            <i class="bi bi-inbox"></i>
+                            لا توجد مهام مكتملة
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if workflow_mode == 'AUTO' %}
+                    <div class="card-footer bg-transparent">
+                        <a href="{% url 'translator_available_orders' %}" class="btn btn-navy btn-sm">
+                            <i class="bi bi-search"></i> الأوامر المتاحة
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}

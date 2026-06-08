@@ -30,7 +30,9 @@ def _send(subject, message, recipients):
 
 
 def notify_new_order(order):
+    # Send to both SmartWorld admins and contract managers
     recipients = _get_emails_by_role(UserProfile.Role.SMARTWORLD_ADMIN)
+    recipients.extend(_get_emails_by_role(UserProfile.Role.CONTRACT_MANAGER))
     _send(
         subject=f'أمر تكليف جديد: {order.order_number}',
         message=(
@@ -39,7 +41,7 @@ def notify_new_order(order):
             f'نوع الخدمة: {order.get_service_type_display()}\n'
             f'تاريخ التنفيذ: {order.execution_date}\n'
         ),
-        recipients=recipients,
+        recipients=list(set(recipients)),
     )
 
 
@@ -104,4 +106,66 @@ def notify_pp_disputed(order):
             f'{reason}'
         ),
         recipients=recipients,
+    )
+
+
+def notify_translator_assigned(assignment):
+    """Email translator when assigned to an order"""
+    if not assignment.translator.email:
+        return
+    _send(
+        subject=f'تعيين جديد: {assignment.work_order.order_number}',
+        message=(
+            f'تم تعيينك للعمل على أمر التكليف رقم {assignment.work_order.order_number}\n'
+            f'اللغة: {assignment.language_line.language_display}\n'
+            f'نوع الخدمة: {assignment.work_order.get_service_type_display()}\n'
+            f'تاريخ التنفيذ: {assignment.work_order.execution_date}\n'
+            f'يرجى تسجيل الدخول لقبول أو رفض التعيين.'
+        ),
+        recipients=[assignment.translator.email],
+    )
+
+
+def notify_assignment_accepted(assignment):
+    """Email CM when translator accepts assignment"""
+    recipients = _get_emails_by_role(UserProfile.Role.CONTRACT_MANAGER)
+    _send(
+        subject=f'قبول تعيين: {assignment.work_order.order_number}',
+        message=(
+            f'قبل المترجم {assignment.translator.get_full_name()} التعيين '
+            f'لأمر التكليف رقم {assignment.work_order.order_number}\n'
+            f'اللغة: {assignment.language_line.language_display}'
+        ),
+        recipients=recipients,
+    )
+
+
+def notify_assignment_declined(assignment):
+    """Email CM when translator declines — needs reassignment"""
+    recipients = _get_emails_by_role(UserProfile.Role.CONTRACT_MANAGER)
+    _send(
+        subject=f'رفض تعيين: {assignment.work_order.order_number}',
+        message=(
+            f'رفض المترجم {assignment.translator.get_full_name()} التعيين '
+            f'لأمر التكليف رقم {assignment.work_order.order_number}\n'
+            f'اللغة: {assignment.language_line.language_display}\n'
+            f'يرجى إعادة تعيين مترجم آخر.'
+        ),
+        recipients=recipients,
+    )
+
+
+def notify_all_assignments_completed(order):
+    """Email PP staff + CM when all translators done"""
+    recipients = []
+    if order.created_by.email:
+        recipients.append(order.created_by.email)
+    recipients.extend(_get_emails_by_role(UserProfile.Role.CONTRACT_MANAGER))
+    _send(
+        subject=f'اكتمال جميع التعيينات: {order.order_number}',
+        message=(
+            f'أكمل جميع المترجمين عملهم على أمر التكليف رقم {order.order_number}\n'
+            f'الأمر بانتظار اعتماد النيابة.'
+        ),
+        recipients=list(set(recipients)),
     )

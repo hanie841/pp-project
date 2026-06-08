@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load arabic_filters %}
+
+{% block title %}تسجيل الخدمة - {{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="page-header">
+            <h3><i class="bi bi-pencil-square"></i> تسجيل الخدمة</h3>
+            <a href="{% url 'translator_dashboard' %}" class="btn btn-outline-gold btn-sm">
+                <i class="bi bi-arrow-right"></i> العودة
+            </a>
+        </div>
+
+        <div class="card card-accent mb-4">
+            <div class="card-header card-header-navy">
+                <i class="bi bi-info-circle"></i> معلومات التعيين
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr><th style="color: var(--gold-dark);">رقم الأمر:</th><td>{{ order.order_number }}</td></tr>
+                    <tr><th style="color: var(--gold-dark);">النيابة:</th><td>{{ order.prosecution.name }}</td></tr>
+                    <tr><th style="color: var(--gold-dark);">نوع الخدمة:</th><td>{{ order.get_service_type_display }}</td></tr>
+                    <tr><th style="color: var(--gold-dark);">اللغة:</th><td>{{ lang_line.language_display }}</td></tr>
+                    <tr><th style="color: var(--gold-dark);">تاريخ التنفيذ:</th><td>{{ order.execution_date|date:"Y/m/d" }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Estimated vs Actual comparison -->
+        <div class="card card-accent mb-4">
+            <div class="card-header card-header-gold">
+                <i class="bi bi-bar-chart-line"></i> التقديري مقابل الفعلي
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="p-3 rounded" style="background: #f8f9fa; border-right: 3px solid var(--navy);">
+                            <h6 class="mb-2" style="color: var(--navy);">التقديري</h6>
+                            {% if lang_line.estimated_hours %}
+                            <p class="mb-1"><strong>الساعات:</strong> {{ lang_line.estimated_hours }}</p>
+                            {% endif %}
+                            {% if lang_line.estimated_pages %}
+                            <p class="mb-1"><strong>الصفحات:</strong> {{ lang_line.estimated_pages }}</p>
+                            {% endif %}
+                            <p class="mb-0"><strong>المبلغ التقديري:</strong> {{ lang_line.estimated_amount|currency }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded" style="background: #f8f9fa; border-right: 3px solid var(--gold);">
+                            <h6 class="mb-2" style="color: var(--gold-dark);">الفعلي</h6>
+                            <p class="text-muted mb-0">أدخل القيم الفعلية أدناه</p>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                        <p class="mb-0">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if order.is_interpretation %}
+                    <div class="mb-3">
+                        <label class="form-label"><strong>الساعات الفعلية</strong></label>
+                        {{ form.actual_hours }}
+                        {% if form.actual_hours.errors %}
+                        <div class="text-danger small">{{ form.actual_hours.errors }}</div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="mb-3">
+                        <label class="form-label"><strong>الصفحات الفعلية</strong></label>
+                        {{ form.actual_pages }}
+                        {% if form.actual_pages.errors %}
+                        <div class="text-danger small">{{ form.actual_pages.errors }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>ملاحظات</strong></label>
+                        {{ form.notes }}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-navy btn-lg">
+                            <i class="bi bi-check-circle-fill"></i> تسجيل الخدمة
+                        </button>
+                        <a href="{% url 'translator_dashboard' %}" class="btn btn-outline-gold btn-lg">
+                            <i class="bi bi-x-lg"></i> إلغاء
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

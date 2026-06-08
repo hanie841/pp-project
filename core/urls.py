@@ -16,4 +16,14 @@ urlpatterns = [
     path('orders/<int:pk>/certificate/', views.order_certificate, name='order_certificate'),
     path('orders/<int:pk>/pdf/', views.order_pdf, name='order_pdf'),
     path('orders/<int:pk>/certificate/pdf/', views.certificate_pdf, name='certificate_pdf'),
+    # Contract Manager
+    path('orders/<int:pk>/cm-accept/', views.cm_accept_order, name='cm_accept_order'),
+    path('orders/<int:pk>/assign/', views.cm_assign_translators, name='cm_assign_translators'),
+    # Translator
+    path('translator/', views.translator_dashboard, name='translator_dashboard'),
+    path('translator/available/', views.translator_available_orders, name='translator_available_orders'),
+    path('translator/self-assign/<int:ll_pk>/', views.translator_self_assign, name='translator_self_assign'),
+    path('translator/assignment/<int:pk>/accept/', views.assignment_accept, name='assignment_accept'),
+    path('translator/assignment/<int:pk>/decline/', views.assignment_decline, name='assignment_decline'),
+    path('translator/assignment/<int:pk>/log/', views.translator_log_service, name='translator_log_service'),
 ]

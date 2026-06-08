@@ -149,6 +149,7 @@ body {
 .badge-draft { background: #6c757d; }
 .badge-submitted { background: #0d6efd; }
 .badge-accepted { background: #0dcaf0; color: #000; }
+.badge-assigned { background: #6f42c1; }
 .badge-in_progress { background: #8B7355; }
 .badge-pending_approval { background: #ffc107; color: #000; }
 .badge-completed { background: #198754; }

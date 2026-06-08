@@ -46,6 +46,7 @@ class UserProfile(models.Model):
         SMARTWORLD_ADMIN = 'SMARTWORLD_ADMIN', 'مدير سمارت وورلد'
         SMARTWORLD_STAFF = 'SMARTWORLD_STAFF', 'موظف سمارت وورلد'
         CONTRACT_MANAGER = 'CONTRACT_MANAGER', 'مدير العقد'
+        TRANSLATOR = 'TRANSLATOR', 'مترجم'
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
@@ -79,6 +80,10 @@ class UserProfile(models.Model):
     @property
     def is_contract_manager(self):
         return self.role == self.Role.CONTRACT_MANAGER
+
+    @property
+    def is_translator(self):
+        return self.role == self.Role.TRANSLATOR
 
 
 class Language(models.Model):
@@ -118,6 +123,7 @@ class WorkOrder(models.Model):
         DRAFT = 'DRAFT', 'مسودة'
         SUBMITTED = 'SUBMITTED', 'مقدم'
         ACCEPTED = 'ACCEPTED', 'مقبول'
+        ASSIGNED = 'ASSIGNED', 'تم التعيين'
         IN_PROGRESS = 'IN_PROGRESS', 'قيد التنفيذ'
         PENDING_APPROVAL = 'PENDING_APPROVAL', 'بانتظار الاعتماد'
         COMPLETED = 'COMPLETED', 'مكتمل'
@@ -423,3 +429,94 @@ class CompletionCertificate(models.Model):
             status=cls.Status.FINALIZED
         ).aggregate(total=models.Sum('grand_total'))
         return result['total'] or Decimal('0')
+
+
+class TranslatorProfile(models.Model):
+    """Translator/Interpreter profile with language capabilities"""
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='translator_profile', verbose_name='المستخدم'
+    )
+    languages = models.ManyToManyField(Language, verbose_name='اللغات')
+    can_interpret = models.BooleanField('ترجمة فورية', default=True)
+    can_translate = models.BooleanField('ترجمة تحريرية', default=True)
+    phone = models.CharField('الهاتف', max_length=20, blank=True)
+    is_active = models.BooleanField('نشط', default=True)
+
+    class Meta:
+        verbose_name = 'ملف مترجم'
+        verbose_name_plural = 'ملفات المترجمين'
+
+    def __str__(self):
+        return f'{self.user.get_full_name()} - مترجم'
+
+
+class OrderAssignment(models.Model):
+    """Assignment of a translator to a specific language line of an order"""
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', 'بانتظار القبول'
+        ACCEPTED = 'ACCEPTED', 'مقبول'
+        DECLINED = 'DECLINED', 'مرفوض'
+        COMPLETED = 'COMPLETED', 'مكتمل'
+
+    work_order = models.ForeignKey(
+        WorkOrder, on_delete=models.CASCADE,
+        related_name='assignments', verbose_name='أمر التكليف'
+    )
+    language_line = models.ForeignKey(
+        WorkOrderLanguage, on_delete=models.CASCADE,
+        related_name='assignments', verbose_name='بند اللغة'
+    )
+    translator = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='assignments', verbose_name='المترجم'
+    )
+    status = models.CharField(
+        'الحالة', max_length=20, choices=Status.choices,
+        default=Status.PENDING
+    )
+    assigned_at = models.DateTimeField('تاريخ التعيين', auto_now_add=True)
+    accepted_at = models.DateTimeField('تاريخ القبول', null=True, blank=True)
+    completed_at = models.DateTimeField('تاريخ الإنجاز', null=True, blank=True)
+    service_record = models.OneToOneField(
+        ServiceRecord, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='assignment',
+        verbose_name='سجل الخدمة'
+    )
+
+    class Meta:
+        verbose_name = 'تعيين مترجم'
+        verbose_name_plural = 'تعيينات المترجمين'
+        ordering = ['-assigned_at']
+
+    def __str__(self):
+        return f'{self.translator.get_full_name()} → {self.work_order.order_number} ({self.language_line.language_display})'
+
+
+class WorkflowConfig(models.Model):
+    """Singleton: admin controls for workflow mode"""
+    class Mode(models.TextChoices):
+        MANUAL = 'MANUAL', 'يدوي (مدير العقد يعين المترجمين)'
+        AUTO = 'AUTO', 'تلقائي (المترجمون يختارون الأوامر)'
+
+    mode = models.CharField(
+        'وضع سير العمل', max_length=10,
+        choices=Mode.choices, default=Mode.MANUAL
+    )
+    updated_at = models.DateTimeField('آخر تحديث', auto_now=True)
+
+    class Meta:
+        verbose_name = 'إعدادات سير العمل'
+        verbose_name_plural = 'إعدادات سير العمل'
+
+    def __str__(self):
+        return f'وضع سير العمل: {self.get_mode_display()}'
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_config(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

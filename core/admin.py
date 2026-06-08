@@ -5,6 +5,7 @@ from .models import (
     Prosecution, Prosecutor, UserProfile, Language,
     WorkOrder, WorkOrderLanguage, ServiceRecord,
     WorkOrderApproval, CompletionCertificate,
+    TranslatorProfile, OrderAssignment, WorkflowConfig,
 )
 
 
@@ -78,13 +79,21 @@ class CompletionCertificateInline(admin.StackedInline):
     readonly_fields = ('certificate_number', 'generated_at')
 
 
+class OrderAssignmentInline(admin.TabularInline):
+    model = OrderAssignment
+    extra = 0
+    fields = ('language_line', 'translator', 'status', 'assigned_at', 'accepted_at', 'completed_at')
+    readonly_fields = ('assigned_at', 'accepted_at', 'completed_at')
+    raw_id_fields = ('translator',)
+
+
 @admin.register(WorkOrder)
 class WorkOrderAdmin(admin.ModelAdmin):
     list_display = ('order_number', 'prosecution', 'prosecutor_display_admin', 'service_type', 'status', 'execution_date', 'created_at')
     list_filter = ('status', 'service_type', 'prosecution')
     search_fields = ('order_number', 'custom_prosecutor_name')
     list_editable = ('status',)
-    inlines = [WorkOrderLanguageInline, ServiceRecordInline, WorkOrderApprovalInline, CompletionCertificateInline]
+    inlines = [WorkOrderLanguageInline, OrderAssignmentInline, ServiceRecordInline, WorkOrderApprovalInline, CompletionCertificateInline]
     readonly_fields = ('order_number', 'created_at', 'updated_at', 'submitted_at')
     fieldsets = (
         ('معلومات الطلب', {
@@ -127,6 +136,38 @@ class ServiceRecordAdmin(admin.ModelAdmin):
     list_display = ('work_order', 'language', 'num_translators', 'actual_hours', 'actual_pages', 'unit_rate', 'amount')
     list_filter = ('language',)
     search_fields = ('work_order__order_number',)
+
+
+@admin.register(TranslatorProfile)
+class TranslatorProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'get_languages', 'can_interpret', 'can_translate', 'phone', 'is_active')
+    list_filter = ('is_active', 'can_interpret', 'can_translate', 'languages')
+    list_editable = ('is_active',)
+    filter_horizontal = ('languages',)
+    raw_id_fields = ('user',)
+
+    @admin.display(description='اللغات')
+    def get_languages(self, obj):
+        return ', '.join(l.name_ar for l in obj.languages.all())
+
+
+@admin.register(OrderAssignment)
+class OrderAssignmentAdmin(admin.ModelAdmin):
+    list_display = ('work_order', 'language_line', 'translator', 'status', 'assigned_at', 'accepted_at', 'completed_at')
+    list_filter = ('status',)
+    search_fields = ('work_order__order_number', 'translator__first_name', 'translator__last_name')
+    raw_id_fields = ('translator', 'work_order', 'language_line', 'service_record')
+
+
+@admin.register(WorkflowConfig)
+class WorkflowConfigAdmin(admin.ModelAdmin):
+    list_display = ('mode', 'updated_at')
+
+    def has_add_permission(self, request):
+        return not WorkflowConfig.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 admin.site.site_header = 'بوابة خدمات الترجمة - النيابة العامة الاتحادية'

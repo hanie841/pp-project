@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load arabic_filters %}
+
+{% block title %}تعيين المترجمين - {{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="page-header">
+            <h3><i class="bi bi-people-fill"></i> تعيين المترجمين - {{ order.order_number }}</h3>
+            <a href="{% url 'order_detail' order.pk %}" class="btn btn-outline-gold btn-sm">
+                <i class="bi bi-arrow-right"></i> العودة
+            </a>
+        </div>
+
+        <div class="card card-accent mb-4">
+            <div class="card-header card-header-navy">
+                <i class="bi bi-info-circle"></i> معلومات الأمر
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4"><strong>رقم الأمر:</strong> {{ order.order_number }}</div>
+                    <div class="col-md-4"><strong>نوع الخدمة:</strong> {{ order.get_service_type_display }}</div>
+                    <div class="col-md-4"><strong>تاريخ التنفيذ:</strong> {{ order.execution_date|date:"Y/m/d" }}</div>
+                </div>
+            </div>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="card card-accent mb-4">
+                <div class="card-header card-header-gold">
+                    <i class="bi bi-translate"></i> بنود اللغات والمترجمين
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover table-gov mb-0">
+                        <thead>
+                            <tr>
+                                <th>اللغة</th>
+                                <th>عدد المترجمين المطلوب</th>
+                                <th>{% if order.is_interpretation %}الساعات{% else %}الصفحات{% endif %}</th>
+                                <th>الحالة</th>
+                                <th>تعيين المترجم</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in forms_list %}
+                            <tr>
+                                <td><strong>{{ item.lang_line.language_display }}</strong></td>
+                                <td>{{ item.lang_line.num_translators }}</td>
+                                <td>{% if item.lang_line.estimated_hours %}{{ item.lang_line.estimated_hours }}{% else %}{{ item.lang_line.estimated_pages }}{% endif %}</td>
+                                <td>
+                                    {% if item.existing %}
+                                    <span class="badge bg-success"><i class="bi bi-check-lg"></i> معين: {{ item.existing.translator.get_full_name }}</span>
+                                    {% else %}
+                                    <span class="badge" style="background: #F9A825; color: #333;">غير معين</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.existing %}
+                                    <span class="text-muted">-</span>
+                                    {% else %}
+                                    {{ item.form.translator }}
+                                    {% if item.form.translator.errors %}
+                                    <div class="text-danger small">{{ item.form.translator.errors }}</div>
+                                    {% endif %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-navy btn-lg">
+                    <i class="bi bi-check-circle-fill"></i> تعيين المترجمين
+                </button>
+                <a href="{% url 'order_detail' order.pk %}" class="btn btn-outline-gold btn-lg">
+                    <i class="bi bi-x-lg"></i> إلغاء
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

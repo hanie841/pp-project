@@ -1,8 +1,10 @@
 from django import forms
 from django.forms import inlineformset_factory
+from django.contrib.auth.models import User
 from .models import (
     WorkOrder, WorkOrderLanguage, ServiceRecord,
     Prosecution, Prosecutor, Language,
+    TranslatorProfile, OrderAssignment,
 )
 
 
@@ -97,3 +99,58 @@ class DisputeForm(forms.Form):
         label='سبب الاعتراض',
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
     )
+
+
+class AssignTranslatorForm(forms.Form):
+    """Contract manager picks a translator for a language line"""
+    translator = forms.ModelChoiceField(
+        queryset=User.objects.none(),
+        label='المترجم',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+
+    def __init__(self, *args, language_line=None, service_type=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if language_line:
+            lang = language_line.language
+            profiles = TranslatorProfile.objects.filter(
+                is_active=True, languages=lang
+            )
+            if service_type == WorkOrder.ServiceType.INTERPRETATION:
+                profiles = profiles.filter(can_interpret=True)
+            elif service_type in (
+                WorkOrder.ServiceType.WRITTEN,
+                WorkOrder.ServiceType.REVIEW,
+                WorkOrder.ServiceType.AI_REVIEW,
+            ):
+                profiles = profiles.filter(can_translate=True)
+            self.fields['translator'].queryset = User.objects.filter(
+                pk__in=profiles.values_list('user_id', flat=True)
+            )
+
+
+class TranslatorServiceForm(forms.Form):
+    """Translator logs actual hours/pages for their assignment"""
+    actual_hours = forms.DecimalField(
+        label='الساعات الفعلية',
+        max_digits=6, decimal_places=2, required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'min': '1'}),
+    )
+    actual_pages = forms.DecimalField(
+        label='الصفحات الفعلية',
+        max_digits=6, decimal_places=2, required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'min': '1'}),
+    )
+    notes = forms.CharField(
+        label='ملاحظات',
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        hours = cleaned_data.get('actual_hours')
+        pages = cleaned_data.get('actual_pages')
+        if not hours and not pages:
+            raise forms.ValidationError('يرجى إدخال الساعات الفعلية أو الصفحات الفعلية')
+        return cleaned_data
