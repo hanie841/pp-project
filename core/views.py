@@ -27,7 +27,7 @@ from .signals import (
     notify_assignment_declined, notify_all_assignments_completed,
 )
 from .livekit_utils import (
-    create_room, generate_join_token,
+    create_room, generate_join_token, update_room_metadata,
     start_room_recording, stop_recording, list_egress,
 )
 
@@ -1090,3 +1090,95 @@ def recording_download(request, pk, rec_pk):
         as_attachment=True,
         filename=filename,
     )
+
+
+# ── Captions Views ───────────────────────────────────────────────────
+
+@login_required
+def captions_toggle(request, pk):
+    """Toggle live captions room-wide via room metadata (manager only)."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    order = get_object_or_404(WorkOrder, pk=pk)
+    profile = _get_profile(request.user)
+
+    if not _can_manage_conference(request.user, profile):
+        return JsonResponse({'error': 'غير مسموح'}, status=403)
+
+    if not order.conference_room:
+        return JsonResponse({'error': 'لا توجد غرفة اجتماع'}, status=404)
+
+    import json
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    enable = bool(body.get('enable', False))
+    success = update_room_metadata(order.conference_room, {'captions': enable})
+
+    if not success:
+        return JsonResponse({'error': 'فشل تحديث الغرفة'}, status=502)
+
+    return JsonResponse({'ok': True, 'captions': enable})
+
+
+@login_required
+def captions_translate(request, pk):
+    """Translate a caption text using OpenAI GPT-4o-mini."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    order = get_object_or_404(WorkOrder, pk=pk)
+    profile = _get_profile(request.user)
+
+    if not _can_join_conference(request.user, profile, order):
+        return JsonResponse({'error': 'غير مسموح'}, status=403)
+
+    if not settings.OPENAI_API_KEY:
+        return JsonResponse({'error': 'Translation not configured'}, status=503)
+
+    import json
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    text = body.get('text', '').strip()
+    source_lang = body.get('source_lang', '')
+    target_lang = body.get('target_lang', '')
+
+    if not text or not target_lang:
+        return JsonResponse({'error': 'Missing text or target_lang'}, status=400)
+
+    from openai import OpenAI
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+
+    try:
+        resp = client.chat.completions.create(
+            model='gpt-4o-mini',
+            temperature=0.1,
+            max_tokens=500,
+            messages=[
+                {
+                    'role': 'system',
+                    'content': (
+                        'You are a legal translation assistant for UAE Federal Prosecution. '
+                        'Translate the following text accurately and concisely. '
+                        'Preserve legal terminology. Return ONLY the translated text, '
+                        'no explanations or notes.'
+                    ),
+                },
+                {
+                    'role': 'user',
+                    'content': f'Translate from {source_lang} to {target_lang}:\n{text}',
+                },
+            ],
+        )
+        translated = resp.choices[0].message.content.strip()
+        return JsonResponse({'translated': translated})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f'Caption translation failed: {e}')
+        return JsonResponse({'error': 'Translation failed'}, status=502)

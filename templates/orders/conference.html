@@ -125,6 +125,89 @@
         color: #fff;
         animation: pulse-rec 1.5s infinite;
     }
+    /* ── Caption styles ─────────────────────────────── */
+    #caption-bar {
+        display: none;
+        background: rgba(0, 0, 0, 0.85);
+        max-height: 160px;
+        overflow-y: auto;
+        padding: 8px 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    #caption-bar::-webkit-scrollbar { width: 4px; }
+    #caption-bar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 2px; }
+    .caption-line {
+        margin-bottom: 6px;
+        line-height: 1.4;
+    }
+    .caption-speaker {
+        color: #D4A843;
+        font-weight: 600;
+        font-size: 0.8rem;
+        margin-left: 6px;
+    }
+    .caption-original {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.85rem;
+    }
+    .caption-translated {
+        color: #fff;
+        font-size: 0.95rem;
+        font-weight: 500;
+        margin-top: 2px;
+    }
+    .caption-interim {
+        font-style: italic;
+        opacity: 0.5;
+    }
+    /* CC button states */
+    .ctrl-btn-cc {
+        background: #1B2A4A;
+        color: #fff;
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+    .ctrl-btn-cc-active {
+        background: #D4A843;
+        color: #1B2A4A;
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+    /* Caption settings popover */
+    #caption-settings {
+        display: none;
+        position: absolute;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #fff;
+        border-radius: 10px;
+        padding: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+        z-index: 1060;
+        min-width: 280px;
+    }
+    #caption-settings label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-bottom: 4px;
+        color: #333;
+    }
+    #caption-settings select {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        margin-bottom: 12px;
+        font-size: 0.85rem;
+    }
+    #caption-settings .stt-warning {
+        display: none;
+        color: #dc3545;
+        font-size: 0.78rem;
+        margin-top: 4px;
+    }
     @media (max-width: 576px) {
         #video-grid {
             grid-template-columns: 1fr;
@@ -132,6 +215,7 @@
             padding: 8px;
         }
         .ctrl-btn { width: 44px; height: 44px; font-size: 1.1rem; }
+        #caption-settings { min-width: 240px; }
     }
 </style>
 {% endblock %}
@@ -154,9 +238,51 @@
             <span class="rec-dot"></span> جاري التسجيل
         </div>
 
-        <div id="conference-container" class="card card-accent">
+        <div id="conference-container" class="card card-accent" style="position:relative;">
             <div id="status-msg">جاري الاتصال بغرفة الاجتماع...</div>
             <div id="video-grid"></div>
+
+            <!-- Caption bar between video grid and controls -->
+            <div id="caption-bar">
+                <div id="caption-lines"></div>
+            </div>
+
+            <!-- Caption settings popover -->
+            <div id="caption-settings">
+                <label for="spoken-lang">لغة التحدث (STT)</label>
+                <select id="spoken-lang">
+                    <option value="ar-SA">العربية</option>
+                    <option value="en-US" selected>English</option>
+                    <option value="ur-PK">اردو</option>
+                    <option value="hi-IN">हिन्दी</option>
+                    <option value="fa-IR">فارسی</option>
+                    <option value="ps-AF">پښتو</option>
+                    <option value="ru-RU">Русский</option>
+                    <option value="zh-CN">中文</option>
+                    <option value="vi-VN">Tiếng Việt</option>
+                    <option value="si-LK">සිංහල</option>
+                    <option value="tl-PH">Filipino</option>
+                </select>
+                <label for="translate-lang">ترجمة إلى</label>
+                <select id="translate-lang">
+                    <option value="">بدون ترجمة</option>
+                    <option value="ar-SA">العربية</option>
+                    <option value="en-US">English</option>
+                    <option value="ur-PK">اردو</option>
+                    <option value="hi-IN">हिन्दी</option>
+                    <option value="fa-IR">فارسی</option>
+                    <option value="ps-AF">پښتو</option>
+                    <option value="ru-RU">Русский</option>
+                    <option value="zh-CN">中文</option>
+                    <option value="vi-VN">Tiếng Việt</option>
+                    <option value="si-LK">සිංහල</option>
+                    <option value="tl-PH">Filipino</option>
+                </select>
+                <div class="stt-warning" id="stt-warning">
+                    متصفحك لا يدعم التعرف على الكلام. يمكنك رؤية ترجمات المشاركين الآخرين.
+                </div>
+            </div>
+
             <div id="controls-bar">
                 <button class="ctrl-btn ctrl-btn-on" id="btn-mic" title="الميكروفون">
                     <i class="bi bi-mic-fill"></i>
@@ -167,6 +293,16 @@
                 {% if can_manage %}
                 <button class="ctrl-btn ctrl-btn-rec" id="btn-rec" title="تسجيل">
                     <i class="bi bi-record-circle"></i>
+                </button>
+                {% endif %}
+                <!-- CC button (all participants) -->
+                <button class="ctrl-btn ctrl-btn-cc" id="btn-cc" title="الترجمة المباشرة">
+                    CC
+                </button>
+                {% if can_manage %}
+                <!-- CC ALL button (manager only) -->
+                <button class="ctrl-btn ctrl-btn-cc" id="btn-cc-all" title="تفعيل الترجمة للجميع">
+                    CC&#8239;ALL
                 </button>
                 {% endif %}
                 <button class="ctrl-btn ctrl-btn-leave" id="btn-leave" title="مغادرة">
@@ -188,6 +324,9 @@
     const ORDER_PK = {{ order.pk }};
     const DETAIL_URL = '{% url "order_detail" order.pk %}';
     const TOKEN_URL  = '{% url "conference_token_api" order.pk %}';
+    const CAN_MANAGE = {{ can_manage|yesno:"true,false" }};
+    const MY_IDENTITY = '{{ request.user.email|default:request.user.username }}';
+    const MY_NAME = '{{ request.user.get_full_name|default:request.user.username }}';
 
     const grid     = document.getElementById('video-grid');
     const statusEl = document.getElementById('status-msg');
@@ -302,6 +441,7 @@
         room.on(LivekitClient.RoomEvent.Disconnected, () => {
             statusEl.textContent = 'تم قطع الاتصال';
             grid.innerHTML = '';
+            stopRecognition();
         });
 
         try {
@@ -329,6 +469,9 @@
 
             // Enable camera and mic
             await room.localParticipant.enableCameraAndMicrophone();
+
+            // Setup caption receiver after connecting
+            setupCaptionReceiver();
 
         } catch (err) {
             console.error('Connection error:', err);
@@ -358,6 +501,7 @@
     });
 
     btnLeave.addEventListener('click', async () => {
+        stopRecognition();
         if (room) {
             await room.disconnect();
         }
@@ -429,6 +573,439 @@
     setInterval(checkRecordingStatus, 5000);
     // Initial check
     checkRecordingStatus();
+
+    // ── Live Captions ─────────────────────────────────
+    const CAPTION_TOGGLE_URL = '{% url "captions_toggle" order.pk %}';
+    const CAPTION_TRANSLATE_URL = '{% url "captions_translate" order.pk %}';
+
+    const captionBar = document.getElementById('caption-bar');
+    const captionLines = document.getElementById('caption-lines');
+    const captionSettings = document.getElementById('caption-settings');
+    const spokenLangSelect = document.getElementById('spoken-lang');
+    const translateLangSelect = document.getElementById('translate-lang');
+    const sttWarning = document.getElementById('stt-warning');
+    const btnCC = document.getElementById('btn-cc');
+    const btnCCAll = document.getElementById('btn-cc-all');
+
+    let captionsLocalEnabled = false;
+    let captionsRoomEnabled = false;
+    let recognition = null;
+    let recognitionRunning = false;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const sttSupported = !!SpeechRecognition;
+
+    // Show warning if STT not supported
+    if (!sttSupported) {
+        sttWarning.style.display = 'block';
+    }
+
+    // Translation cache (max 50 entries)
+    const translationCache = new Map();
+    let activeTranslateController = null;
+
+    // RTL language prefixes
+    const RTL_LANGS = ['ar', 'fa', 'ur', 'ps', 'he'];
+
+    function isRTL(langCode) {
+        const prefix = (langCode || '').split('-')[0];
+        return RTL_LANGS.includes(prefix);
+    }
+
+    function escapeHtml(text) {
+        const d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+    }
+
+    // Language display names for caption labels
+    const LANG_NAMES = {
+        'ar-SA': 'العربية', 'en-US': 'English', 'ur-PK': 'اردو',
+        'hi-IN': 'हिन्दी', 'fa-IR': 'فارسی', 'ps-AF': 'پښتو',
+        'ru-RU': 'Русский', 'zh-CN': '中文', 'vi-VN': 'Tiếng Việt',
+        'si-LK': 'සිංහල', 'tl-PH': 'Filipino',
+    };
+
+    // ── Speech Recognition ────────────────────────────
+    function startRecognition() {
+        if (!sttSupported || recognitionRunning) return;
+
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = spokenLangSelect.value;
+
+        recognition.onresult = function(event) {
+            if (!room || !room.localParticipant) return;
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const result = event.results[i];
+                const transcript = result[0].transcript.trim();
+                if (!transcript) continue;
+
+                const msg = {
+                    id: MY_IDENTITY,
+                    n: MY_NAME,
+                    t: transcript,
+                    l: spokenLangSelect.value,
+                    f: result.isFinal,
+                    ts: Date.now(),
+                };
+
+                const encoder = new TextEncoder();
+                const data = encoder.encode(JSON.stringify(msg));
+                room.localParticipant.publishData(data, {
+                    reliable: result.isFinal,
+                    topic: 'caption',
+                });
+
+                // Display own caption locally
+                displayCaption(msg);
+            }
+        };
+
+        recognition.onend = function() {
+            recognitionRunning = false;
+            // Auto-restart if captions still enabled
+            if (captionsLocalEnabled) {
+                setTimeout(() => {
+                    if (captionsLocalEnabled) startRecognition();
+                }, 300);
+            }
+        };
+
+        recognition.onerror = function(event) {
+            console.warn('Speech recognition error:', event.error);
+            recognitionRunning = false;
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                // Permission denied — stop trying
+                return;
+            }
+            // Transient errors — auto-restart
+            if (captionsLocalEnabled) {
+                setTimeout(() => {
+                    if (captionsLocalEnabled) startRecognition();
+                }, 300);
+            }
+        };
+
+        try {
+            recognition.start();
+            recognitionRunning = true;
+        } catch (e) {
+            console.warn('Failed to start recognition:', e);
+        }
+    }
+
+    function stopRecognition() {
+        recognitionRunning = false;
+        if (recognition) {
+            try { recognition.abort(); } catch (e) {}
+            recognition = null;
+        }
+    }
+
+    // Restart recognition when spoken language changes
+    spokenLangSelect.addEventListener('change', () => {
+        if (captionsLocalEnabled && sttSupported) {
+            stopRecognition();
+            startRecognition();
+        }
+    });
+
+    // ── Caption Display ───────────────────────────────
+    let captionCounter = 0;
+    const MAX_CAPTION_LINES = 3;
+
+    function displayCaption(msg) {
+        if (!captionsLocalEnabled) return;
+
+        const speakerId = msg.id;
+        const isFinal = msg.f;
+
+        // Find existing interim line for this speaker
+        let existingInterim = captionLines.querySelector(`.caption-line[data-speaker="${CSS.escape(speakerId)}"][data-interim="true"]`);
+
+        if (!isFinal) {
+            // Interim: update or create
+            if (existingInterim) {
+                const origEl = existingInterim.querySelector('.caption-original');
+                if (origEl) {
+                    origEl.innerHTML = escapeHtml(msg.t);
+                    origEl.dir = isRTL(msg.l) ? 'rtl' : 'ltr';
+                }
+            } else {
+                const line = document.createElement('div');
+                line.className = 'caption-line';
+                line.dataset.speaker = speakerId;
+                line.dataset.interim = 'true';
+                line.innerHTML =
+                    '<span class="caption-speaker">' + escapeHtml(msg.n) + ':</span> ' +
+                    '<span class="caption-original caption-interim" dir="' + (isRTL(msg.l) ? 'rtl' : 'ltr') + '">' +
+                    escapeHtml(msg.t) + '</span>';
+                captionLines.appendChild(line);
+                trimCaptionLines();
+            }
+        } else {
+            // Final: replace interim with final, give unique ID
+            if (existingInterim) {
+                existingInterim.remove();
+            }
+
+            captionCounter++;
+            const lineId = 'cap-' + captionCounter;
+
+            const line = document.createElement('div');
+            line.className = 'caption-line';
+            line.id = lineId;
+            line.dataset.speaker = speakerId;
+            line.dataset.interim = 'false';
+            line.innerHTML =
+                '<span class="caption-speaker">' + escapeHtml(msg.n) + ':</span> ' +
+                '<span class="caption-original" dir="' + (isRTL(msg.l) ? 'rtl' : 'ltr') + '">' +
+                escapeHtml(msg.t) + '</span>';
+            captionLines.appendChild(line);
+            trimCaptionLines();
+
+            // Auto-fade after 8 seconds
+            setTimeout(() => {
+                const el = document.getElementById(lineId);
+                if (el) {
+                    el.style.transition = 'opacity 0.5s';
+                    el.style.opacity = '0';
+                    setTimeout(() => { if (el.parentNode) el.remove(); }, 500);
+                }
+            }, 8000);
+
+            // Trigger translation if needed
+            const targetLang = translateLangSelect.value;
+            if (targetLang && targetLang !== msg.l) {
+                translateCaption(msg, lineId);
+            }
+        }
+
+        // Auto-scroll
+        captionBar.scrollTop = captionBar.scrollHeight;
+    }
+
+    function trimCaptionLines() {
+        const lines = captionLines.querySelectorAll('.caption-line');
+        while (lines.length > MAX_CAPTION_LINES) {
+            lines[0].remove();
+        }
+    }
+
+    // ── Translation ───────────────────────────────────
+    async function translateCaption(msg, lineId) {
+        const targetLang = translateLangSelect.value;
+        if (!targetLang || targetLang === msg.l) return;
+
+        const cacheKey = msg.t + '|' + msg.l + '|' + targetLang;
+
+        // Check cache
+        if (translationCache.has(cacheKey)) {
+            showTranslation(lineId, translationCache.get(cacheKey));
+            return;
+        }
+
+        // Cancel previous request
+        if (activeTranslateController) {
+            activeTranslateController.abort();
+        }
+        activeTranslateController = new AbortController();
+
+        try {
+            const resp = await fetch(CAPTION_TRANSLATE_URL, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': CSRF_TOKEN,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: msg.t,
+                    source_lang: LANG_NAMES[msg.l] || msg.l,
+                    target_lang: LANG_NAMES[targetLang] || targetLang,
+                }),
+                signal: activeTranslateController.signal,
+            });
+
+            if (!resp.ok) return;
+            const data = await resp.json();
+
+            if (data.translated) {
+                // Cache result (limit to 50)
+                if (translationCache.size >= 50) {
+                    const firstKey = translationCache.keys().next().value;
+                    translationCache.delete(firstKey);
+                }
+                translationCache.set(cacheKey, data.translated);
+                showTranslation(lineId, data.translated);
+            }
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                console.warn('Translation error:', e);
+            }
+        }
+    }
+
+    function showTranslation(lineId, translatedText) {
+        const line = document.getElementById(lineId);
+        if (!line) return;
+
+        // Check if translation already shown
+        if (line.querySelector('.caption-translated')) return;
+
+        const targetLang = translateLangSelect.value;
+        const transDiv = document.createElement('div');
+        transDiv.className = 'caption-translated';
+        transDiv.dir = isRTL(targetLang) ? 'rtl' : 'ltr';
+        transDiv.textContent = translatedText;
+        line.appendChild(transDiv);
+
+        captionBar.scrollTop = captionBar.scrollHeight;
+    }
+
+    // ── Caption Receiver (LiveKit data messages + metadata) ──
+    function setupCaptionReceiver() {
+        if (!room) return;
+        const LivekitClient = window.LivekitClient;
+
+        // Listen for data messages with topic 'caption'
+        room.on(LivekitClient.RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
+            if (topic !== 'caption') return;
+            // Don't process our own messages (we display them locally already)
+            if (participant && participant.identity === room.localParticipant.identity) return;
+
+            try {
+                const decoder = new TextDecoder();
+                const msg = JSON.parse(decoder.decode(payload));
+                displayCaption(msg);
+            } catch (e) {
+                console.warn('Failed to parse caption data:', e);
+            }
+        });
+
+        // Listen for room metadata changes (captions toggle from manager)
+        room.on(LivekitClient.RoomEvent.RoomMetadataChanged, (metadata) => {
+            handleRoomMetadata(metadata);
+        });
+
+        // Check initial room metadata (for late joiners)
+        if (room.metadata) {
+            handleRoomMetadata(room.metadata);
+        }
+    }
+
+    function handleRoomMetadata(metadataStr) {
+        try {
+            const meta = JSON.parse(metadataStr);
+            captionsRoomEnabled = !!meta.captions;
+
+            // Update CC ALL button state
+            if (btnCCAll) {
+                btnCCAll.className = 'ctrl-btn ' + (captionsRoomEnabled ? 'ctrl-btn-cc-active' : 'ctrl-btn-cc');
+            }
+
+            // If room captions enabled and local not yet on, auto-enable
+            if (captionsRoomEnabled && !captionsLocalEnabled) {
+                enableLocalCaptions();
+            }
+        } catch (e) {
+            // not JSON metadata, ignore
+        }
+    }
+
+    // ── Caption Controls ──────────────────────────────
+    function enableLocalCaptions() {
+        captionsLocalEnabled = true;
+        captionBar.style.display = 'block';
+        btnCC.className = 'ctrl-btn ctrl-btn-cc-active';
+        if (sttSupported) {
+            startRecognition();
+        }
+    }
+
+    function disableLocalCaptions() {
+        captionsLocalEnabled = false;
+        captionBar.style.display = 'none';
+        captionLines.innerHTML = '';
+        btnCC.className = 'ctrl-btn ctrl-btn-cc';
+        stopRecognition();
+    }
+
+    // CC button: toggle local captions + settings popover
+    let settingsVisible = false;
+
+    btnCC.addEventListener('click', () => {
+        if (!captionsLocalEnabled) {
+            enableLocalCaptions();
+            // Show settings popover briefly
+            captionSettings.style.display = 'block';
+            settingsVisible = true;
+            setTimeout(() => {
+                captionSettings.style.display = 'none';
+                settingsVisible = false;
+            }, 5000);
+        } else if (settingsVisible) {
+            // Second click while settings visible: hide settings
+            captionSettings.style.display = 'none';
+            settingsVisible = false;
+        } else {
+            // Toggle off
+            disableLocalCaptions();
+            captionSettings.style.display = 'none';
+            settingsVisible = false;
+        }
+    });
+
+    // Long-press CC to show settings without toggling
+    btnCC.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (captionsLocalEnabled) {
+            settingsVisible = !settingsVisible;
+            captionSettings.style.display = settingsVisible ? 'block' : 'none';
+        }
+    });
+
+    // Close settings when clicking outside
+    document.addEventListener('click', (e) => {
+        if (settingsVisible &&
+            !captionSettings.contains(e.target) &&
+            e.target !== btnCC) {
+            captionSettings.style.display = 'none';
+            settingsVisible = false;
+        }
+    });
+
+    // CC ALL button: manager toggles room-wide captions
+    if (btnCCAll) {
+        btnCCAll.addEventListener('click', async () => {
+            const newState = !captionsRoomEnabled;
+            try {
+                const resp = await fetch(CAPTION_TOGGLE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': CSRF_TOKEN,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ enable: newState }),
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    captionsRoomEnabled = newState;
+                    btnCCAll.className = 'ctrl-btn ' + (newState ? 'ctrl-btn-cc-active' : 'ctrl-btn-cc');
+                    if (newState && !captionsLocalEnabled) {
+                        enableLocalCaptions();
+                    } else if (!newState) {
+                        disableLocalCaptions();
+                    }
+                } else if (data.error) {
+                    console.error('CC ALL toggle error:', data.error);
+                }
+            } catch (e) {
+                console.error('CC ALL toggle error:', e);
+            }
+        });
+    }
 
     // Start
     connect();

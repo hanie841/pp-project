@@ -1,5 +1,6 @@
 """LiveKit integration helpers: room creation and JWT token generation."""
 
+import json
 import time
 import jwt
 import requests
@@ -50,6 +51,31 @@ def create_room(room_name):
         return None
 
 
+def update_room_metadata(room_name, metadata_dict):
+    """Update a LiveKit room's metadata via the Twirp HTTP API.
+
+    metadata_dict is serialized to JSON and set as the room metadata.
+    Returns True on success, False on failure.
+    """
+    url = f'{settings.LIVEKIT_HTTP_URL}/twirp/livekit.RoomService/UpdateRoom'
+    token = _make_api_token(grants={'roomAdmin': True})
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json',
+    }
+    payload = {
+        'room': room_name,
+        'metadata': json.dumps(metadata_dict),
+    }
+    try:
+        resp = requests.post(url, json=payload, headers=headers, timeout=10)
+        resp.raise_for_status()
+        return True
+    except Exception as e:
+        logger.error(f'LiveKit update_room_metadata failed for {room_name}: {e}')
+        return False
+
+
 def generate_join_token(room_name, participant_name, participant_identity):
     """Generate a JWT access token for joining a LiveKit room.
 
@@ -68,6 +94,7 @@ def generate_join_token(room_name, participant_name, participant_identity):
             'roomJoin': True,
             'canPublish': True,
             'canSubscribe': True,
+            'canPublishData': True,
         },
     }
     return jwt.encode(claims, settings.LIVEKIT_API_SECRET, algorithm='HS256')

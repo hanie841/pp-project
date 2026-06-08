@@ -3,3 +3,5 @@ psycopg2-binary>=2.9
 WeasyPrint>=60.0
 django-htmx>=1.17
 gunicorn>=21.2
+openai>=1.30
+PyJWT>=2.8

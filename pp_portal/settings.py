@@ -133,3 +133,6 @@ LIVEKIT_HTTP_URL = os.environ.get('LIVEKIT_HTTP_URL', 'http://127.0.0.1:7880')
 
 # Recording storage (egress container writes here)
 RECORDING_ROOT = os.environ.get('RECORDING_ROOT', '/var/www/gfad-portal/storage/app/recordings')
+
+# OpenAI API (used for caption translation)
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
