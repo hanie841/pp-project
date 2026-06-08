@@ -25,6 +25,7 @@ from .signals import (
     notify_translator_assigned, notify_assignment_accepted,
     notify_assignment_declined, notify_all_assignments_completed,
 )
+from .livekit_utils import create_room, generate_join_token
 
 
 def login_view(request):
@@ -819,3 +820,108 @@ def prosecutors_by_prosecution(request):
     for p in prosecutors:
         options += f'<option value="{p.pk}">{p.name}</option>'
     return HttpResponse(options)
+
+
+# ── LiveKit Conference Views ──────────────────────────────────────────
+
+def _can_manage_conference(user, profile):
+    """Check if user can create conference rooms."""
+    if user.is_superuser:
+        return True
+    if profile and (profile.is_smartworld_admin or profile.is_contract_manager):
+        return True
+    return False
+
+
+def _can_join_conference(user, profile, order):
+    """Check if user is linked to the order and can join its conference."""
+    if user.is_superuser:
+        return True
+    if profile and (profile.is_smartworld_admin or profile.is_smartworld
+                    or profile.is_contract_manager):
+        return True
+    if order.created_by == user:
+        return True
+    if profile and profile.is_pp_staff and profile.prosecution == order.prosecution:
+        return True
+    if order.assignments.filter(translator=user).exists():
+        return True
+    return False
+
+
+@login_required
+def conference_create(request, pk):
+    """Create/start a LiveKit conference room for an online order."""
+    order = get_object_or_404(WorkOrder, pk=pk)
+    profile = _get_profile(request.user)
+
+    if not _can_manage_conference(request.user, profile):
+        return HttpResponseForbidden('غير مسموح')
+
+    if order.conference_room:
+        return redirect('conference_join', pk=pk)
+
+    # Generate room name from order number: 2026/AO/0001 → pp-2026-AO-0001
+    room_name = 'pp-' + order.order_number.replace('/', '-')
+    result = create_room(room_name)
+
+    if result:
+        order.conference_room = room_name
+        join_url = request.build_absolute_uri(f'/orders/{order.pk}/conference/')
+        if not order.location_detail:
+            order.location_detail = join_url
+            order.location_type = WorkOrder.LocationType.ONLINE
+        order.save()
+        messages.success(request, 'تم إنشاء غرفة الاجتماع بنجاح')
+        return redirect('conference_join', pk=pk)
+    else:
+        messages.error(request, 'فشل إنشاء غرفة الاجتماع. يرجى المحاولة لاحقاً.')
+        return redirect('order_detail', pk=pk)
+
+
+@login_required
+def conference_join(request, pk):
+    """Render the video conference room page."""
+    order = get_object_or_404(WorkOrder, pk=pk)
+    profile = _get_profile(request.user)
+
+    if not _can_join_conference(request.user, profile, order):
+        return HttpResponseForbidden('غير مسموح')
+
+    if not order.conference_room:
+        messages.error(request, 'لم يتم إنشاء غرفة اجتماع لهذا الأمر بعد')
+        return redirect('order_detail', pk=pk)
+
+    participant_name = request.user.get_full_name() or request.user.username
+    participant_identity = request.user.email or request.user.username
+    token = generate_join_token(
+        order.conference_room, participant_name, participant_identity,
+    )
+
+    return render(request, 'orders/conference.html', {
+        'order': order,
+        'ws_url': settings.LIVEKIT_WS_URL,
+        'token': token,
+        'room_name': order.conference_room,
+        'profile': profile,
+    })
+
+
+@login_required
+def conference_token_api(request, pk):
+    """JSON endpoint returning a fresh join token (for reconnection)."""
+    order = get_object_or_404(WorkOrder, pk=pk)
+    profile = _get_profile(request.user)
+
+    if not _can_join_conference(request.user, profile, order):
+        return JsonResponse({'error': 'غير مسموح'}, status=403)
+
+    if not order.conference_room:
+        return JsonResponse({'error': 'لا توجد غرفة اجتماع'}, status=404)
+
+    participant_name = request.user.get_full_name() or request.user.username
+    participant_identity = request.user.email or request.user.username
+    token = generate_join_token(
+        order.conference_room, participant_name, participant_identity,
+    )
+    return JsonResponse({'token': token})

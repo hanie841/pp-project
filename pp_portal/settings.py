@@ -124,3 +124,9 @@ CONTRACT_NUMBER = '3922001306'
 VAT_RATE = 5  # percent
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# LiveKit Video Conference
+LIVEKIT_API_KEY = os.environ.get('LIVEKIT_API_KEY', '')
+LIVEKIT_API_SECRET = os.environ.get('LIVEKIT_API_SECRET', '')
+LIVEKIT_WS_URL = os.environ.get('LIVEKIT_WS_URL', 'wss://livekit.swlt.ae')
+LIVEKIT_HTTP_URL = os.environ.get('LIVEKIT_HTTP_URL', 'http://127.0.0.1:7880')

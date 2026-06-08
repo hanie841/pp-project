@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}اجتماع - {{ order.order_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    #conference-container {
+        min-height: 70vh;
+        display: flex;
+        flex-direction: column;
+    }
+    #video-grid {
+        flex: 1;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 12px;
+        padding: 12px;
+    }
+    .participant-tile {
+        position: relative;
+        background: #1B2A4A;
+        border-radius: 10px;
+        overflow: hidden;
+        aspect-ratio: 16/9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .participant-tile video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .participant-name {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        background: linear-gradient(transparent, rgba(0,0,0,0.7));
+        color: #fff;
+        padding: 8px 14px 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    .participant-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: var(--gold-dark, #8B7355);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    #controls-bar {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        padding: 16px;
+        background: #f8f9fa;
+        border-top: 2px solid #e0e0e0;
+    }
+    .ctrl-btn {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        border: none;
+        font-size: 1.3rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .ctrl-btn:hover { transform: scale(1.1); }
+    .ctrl-btn-on { background: #1B2A4A; color: #fff; }
+    .ctrl-btn-off { background: #dc3545; color: #fff; }
+    .ctrl-btn-leave { background: #dc3545; color: #fff; padding: 0 24px; border-radius: 26px; width: auto; }
+    #status-msg {
+        text-align: center;
+        padding: 8px;
+        font-size: 0.9rem;
+        color: #666;
+    }
+    @media (max-width: 576px) {
+        #video-grid {
+            grid-template-columns: 1fr;
+            gap: 8px;
+            padding: 8px;
+        }
+        .ctrl-btn { width: 44px; height: 44px; font-size: 1.1rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-12">
+        <div class="page-header mb-3">
+            <h5 class="mb-0">
+                <i class="bi bi-camera-video-fill"></i>
+                اجتماع: {{ order.order_number }}
+                <small class="text-muted">({{ order.prosecution.name }})</small>
+            </h5>
+            <a href="{% url 'order_detail' order.pk %}" class="btn btn-outline-gold btn-sm" id="back-btn">
+                <i class="bi bi-arrow-right"></i> العودة للأمر
+            </a>
+        </div>
+
+        <div id="conference-container" class="card card-accent">
+            <div id="status-msg">جاري الاتصال بغرفة الاجتماع...</div>
+            <div id="video-grid"></div>
+            <div id="controls-bar">
+                <button class="ctrl-btn ctrl-btn-on" id="btn-mic" title="الميكروفون">
+                    <i class="bi bi-mic-fill"></i>
+                </button>
+                <button class="ctrl-btn ctrl-btn-on" id="btn-cam" title="الكاميرا">
+                    <i class="bi bi-camera-video-fill"></i>
+                </button>
+                <button class="ctrl-btn ctrl-btn-leave" id="btn-leave" title="مغادرة">
+                    <i class="bi bi-telephone-x-fill"></i>
+                    مغادرة
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/livekit-client@2.9.1/dist/livekit-client.umd.min.js"></script>
+<script>
+(function() {
+    const WS_URL   = '{{ ws_url }}';
+    const TOKEN    = '{{ token }}';
+    const ORDER_PK = {{ order.pk }};
+    const DETAIL_URL = '{% url "order_detail" order.pk %}';
+    const TOKEN_URL  = '{% url "conference_token_api" order.pk %}';
+
+    const grid     = document.getElementById('video-grid');
+    const statusEl = document.getElementById('status-msg');
+    const btnMic   = document.getElementById('btn-mic');
+    const btnCam   = document.getElementById('btn-cam');
+    const btnLeave = document.getElementById('btn-leave');
+
+    let micEnabled = true;
+    let camEnabled = true;
+    let room;
+
+    function getInitials(name) {
+        return name.split(' ').map(w => w.charAt(0)).join('').substring(0, 2).toUpperCase();
+    }
+
+    function createTile(identity, name) {
+        const tile = document.createElement('div');
+        tile.className = 'participant-tile';
+        tile.id = 'tile-' + identity;
+        // Avatar placeholder
+        const avatar = document.createElement('div');
+        avatar.className = 'participant-avatar';
+        avatar.textContent = getInitials(name || identity);
+        avatar.id = 'avatar-' + identity;
+        tile.appendChild(avatar);
+        // Name label
+        const label = document.createElement('div');
+        label.className = 'participant-name';
+        label.textContent = name || identity;
+        tile.appendChild(label);
+        grid.appendChild(tile);
+        return tile;
+    }
+
+    function attachTrack(track, participant) {
+        const identity = participant.identity;
+        let tile = document.getElementById('tile-' + identity);
+        if (!tile) {
+            tile = createTile(identity, participant.name || identity);
+        }
+        const el = track.attach();
+        el.id = 'track-' + track.sid;
+        if (track.kind === 'video') {
+            el.style.width = '100%';
+            el.style.height = '100%';
+            el.style.objectFit = 'cover';
+            // Insert before avatar
+            const avatar = document.getElementById('avatar-' + identity);
+            if (avatar) avatar.style.display = 'none';
+            tile.insertBefore(el, tile.firstChild);
+        } else {
+            el.style.display = 'none';
+            tile.appendChild(el);
+        }
+    }
+
+    function detachTrack(track, participant) {
+        const el = document.getElementById('track-' + track.sid);
+        if (el) {
+            track.detach(el);
+            el.remove();
+        }
+        // Show avatar if no more video tracks
+        if (track.kind === 'video' && participant) {
+            const tile = document.getElementById('tile-' + participant.identity);
+            if (tile) {
+                const hasVideo = tile.querySelector('video');
+                if (!hasVideo) {
+                    const avatar = document.getElementById('avatar-' + participant.identity);
+                    if (avatar) avatar.style.display = '';
+                }
+            }
+        }
+    }
+
+    async function connect() {
+        const LivekitClient = window.LivekitClient;
+        room = new LivekitClient.Room({
+            adaptiveStream: true,
+            dynacast: true,
+        });
+
+        room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, _pub, participant) => {
+            attachTrack(track, participant);
+        });
+
+        room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, _pub, participant) => {
+            detachTrack(track, participant);
+        });
+
+        room.on(LivekitClient.RoomEvent.ParticipantConnected, (participant) => {
+            if (!document.getElementById('tile-' + participant.identity)) {
+                createTile(participant.identity, participant.name || participant.identity);
+            }
+        });
+
+        room.on(LivekitClient.RoomEvent.ParticipantDisconnected, (participant) => {
+            const tile = document.getElementById('tile-' + participant.identity);
+            if (tile) tile.remove();
+        });
+
+        room.on(LivekitClient.RoomEvent.LocalTrackPublished, (pub) => {
+            const track = pub.track;
+            if (track) attachTrack(track, room.localParticipant);
+        });
+
+        room.on(LivekitClient.RoomEvent.LocalTrackUnpublished, (pub) => {
+            const track = pub.track;
+            if (track) detachTrack(track, room.localParticipant);
+        });
+
+        room.on(LivekitClient.RoomEvent.Disconnected, () => {
+            statusEl.textContent = 'تم قطع الاتصال';
+            grid.innerHTML = '';
+        });
+
+        try {
+            await room.connect(WS_URL, TOKEN);
+            statusEl.textContent = '';
+
+            // Create local tile
+            createTile(
+                room.localParticipant.identity,
+                (room.localParticipant.name || room.localParticipant.identity) + ' (أنت)'
+            );
+
+            // Create tiles for existing remote participants
+            room.remoteParticipants.forEach((participant) => {
+                if (!document.getElementById('tile-' + participant.identity)) {
+                    createTile(participant.identity, participant.name || participant.identity);
+                }
+                // Attach existing tracks
+                participant.trackPublications.forEach((pub) => {
+                    if (pub.track && pub.isSubscribed) {
+                        attachTrack(pub.track, participant);
+                    }
+                });
+            });
+
+            // Enable camera and mic
+            await room.localParticipant.enableCameraAndMicrophone();
+
+        } catch (err) {
+            console.error('Connection error:', err);
+            statusEl.textContent = 'فشل الاتصال: ' + err.message;
+        }
+    }
+
+    // Controls
+    btnMic.addEventListener('click', async () => {
+        if (!room || !room.localParticipant) return;
+        micEnabled = !micEnabled;
+        await room.localParticipant.setMicrophoneEnabled(micEnabled);
+        btnMic.className = 'ctrl-btn ' + (micEnabled ? 'ctrl-btn-on' : 'ctrl-btn-off');
+        btnMic.innerHTML = micEnabled
+            ? '<i class="bi bi-mic-fill"></i>'
+            : '<i class="bi bi-mic-mute-fill"></i>';
+    });
+
+    btnCam.addEventListener('click', async () => {
+        if (!room || !room.localParticipant) return;
+        camEnabled = !camEnabled;
+        await room.localParticipant.setCameraEnabled(camEnabled);
+        btnCam.className = 'ctrl-btn ' + (camEnabled ? 'ctrl-btn-on' : 'ctrl-btn-off');
+        btnCam.innerHTML = camEnabled
+            ? '<i class="bi bi-camera-video-fill"></i>'
+            : '<i class="bi bi-camera-video-off-fill"></i>';
+    });
+
+    btnLeave.addEventListener('click', async () => {
+        if (room) {
+            await room.disconnect();
+        }
+        window.location.href = DETAIL_URL;
+    });
+
+    // Start
+    connect();
+})();
+</script>
+{% endblock %}

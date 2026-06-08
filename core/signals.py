@@ -154,12 +154,16 @@ def notify_order_accepted(order):
 
 def notify_meeting_link(order):
     recipients = [order.created_by.email] if order.created_by.email else []
+    message = (
+        f'تم توفير رابط الاجتماع لأمر التكليف رقم {order.order_number}\n'
+        f'الرابط: {order.location_detail}'
+    )
+    if order.conference_room:
+        conference_url = f'https://pp.swlt.ae/orders/{order.pk}/conference/'
+        message += f'\n\nللانضمام عبر غرفة الاجتماع المرئي:\n{conference_url}'
     _send(
         subject=f'رابط الاجتماع: {order.order_number}',
-        message=(
-            f'تم توفير رابط الاجتماع لأمر التكليف رقم {order.order_number}\n'
-            f'الرابط: {order.location_detail}'
-        ),
+        message=message,
         recipients=recipients,
     )
 

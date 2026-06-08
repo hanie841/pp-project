@@ -173,6 +173,10 @@ class WorkOrder(models.Model):
     contact_name = models.CharField('اسم جهة الاتصال', max_length=200, blank=True)
     contact_phone = models.CharField('هاتف جهة الاتصال', max_length=20, blank=True)
     notes = models.TextField('ملاحظات', blank=True)
+    conference_room = models.CharField(
+        'غرفة الاجتماع', max_length=100, blank=True,
+        help_text='LiveKit room name (auto-generated)'
+    )
     status = models.CharField(
         'الحالة', max_length=20, choices=Status.choices, default=Status.DRAFT
     )

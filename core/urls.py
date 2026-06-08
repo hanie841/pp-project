@@ -16,6 +16,10 @@ urlpatterns = [
     path('orders/<int:pk>/certificate/', views.order_certificate, name='order_certificate'),
     path('orders/<int:pk>/pdf/', views.order_pdf, name='order_pdf'),
     path('orders/<int:pk>/certificate/pdf/', views.certificate_pdf, name='certificate_pdf'),
+    # Conference
+    path('orders/<int:pk>/conference/create/', views.conference_create, name='conference_create'),
+    path('orders/<int:pk>/conference/', views.conference_join, name='conference_join'),
+    path('orders/<int:pk>/conference/token/', views.conference_token_api, name='conference_token_api'),
     # Contract Manager
     path('orders/<int:pk>/cm-accept/', views.cm_accept_order, name='cm_accept_order'),
     path('orders/<int:pk>/assign/', views.cm_assign_translators, name='cm_assign_translators'),

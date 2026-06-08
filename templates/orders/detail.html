@@ -291,6 +291,34 @@
             {% endif %}
         </div>
 
+        <!-- Video Conference -->
+        {% if order.location_type == 'ONLINE' or order.location_type == 'NEED_LINK' %}
+        <div class="card card-accent mt-4">
+            <div class="card-header card-header-navy">
+                <i class="bi bi-camera-video-fill"></i> اجتماع مرئي
+            </div>
+            <div class="card-body d-flex gap-2 flex-wrap align-items-center">
+                {% if order.conference_room %}
+                <a href="{% url 'conference_join' order.pk %}" class="btn btn-navy btn-lg">
+                    <i class="bi bi-camera-video-fill"></i> انضمام للاجتماع
+                </a>
+                <span class="text-muted">غرفة: {{ order.conference_room }}</span>
+                {% else %}
+                {% if user.is_superuser or profile and profile.is_smartworld_admin or profile and profile.is_contract_manager %}
+                <form method="post" action="{% url 'conference_create' order.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-navy btn-lg">
+                        <i class="bi bi-plus-circle-fill"></i> إنشاء غرفة اجتماع
+                    </button>
+                </form>
+                {% else %}
+                <span class="text-muted">لم يتم إنشاء غرفة اجتماع بعد</span>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Meeting Link -->
         {% if meeting_link_form or user.is_superuser and order.location_type == 'NEED_LINK' and order.status in 'SUBMITTED,ACCEPTED' %}
         <div class="card card-accent mt-4">
