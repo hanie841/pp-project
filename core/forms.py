@@ -1,14 +1,85 @@
+import logging
+import os
+
 from django import forms
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
 from django.contrib.auth.models import User
+from django.template.defaultfilters import filesizeformat
+
+from . import antivirus
 from .models import (
     WorkOrder, WorkOrderLanguage, ServiceRecord,
     Prosecution, Prosecutor, Language,
-    TranslatorProfile, OrderAssignment,
+    TranslatorProfile, OrderAssignment, OrderDocument,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def validate_document_files(files, order=None):
+    """Type, size, the order's quota and (when required) a virus scan."""
+    errors = []
+    for uploaded in files:
+        extension = os.path.splitext(uploaded.name)[1].lower().lstrip('.')
+        if extension not in settings.DOCUMENT_ALLOWED_EXTENSIONS:
+            errors.append(ValidationError(
+                'نوع الملف غير مسموح: %(name)s', params={'name': uploaded.name}))
+        elif uploaded.size > settings.DOCUMENT_MAX_UPLOAD_SIZE:
+            errors.append(ValidationError(
+                'حجم الملف %(name)s يتجاوز الحد المسموح (%(limit)s)',
+                params={'name': uploaded.name,
+                        'limit': filesizeformat(settings.DOCUMENT_MAX_UPLOAD_SIZE)}))
+    if errors:
+        raise ValidationError(errors)
+
+    used = order.documents_total_size if order is not None else 0
+    remaining = settings.DOCUMENT_MAX_ORDER_TOTAL_SIZE - used
+    if sum(uploaded.size for uploaded in files) > remaining:
+        raise ValidationError(
+            'تتجاوز الملفات المساحة المتبقية لأمر التكليف (%(remaining)s)',
+            params={'remaining': filesizeformat(max(remaining, 0))})
+
+    if settings.DOCUMENT_VIRUS_SCAN == 'required':
+        for uploaded in files:
+            try:
+                clean = antivirus.scan(uploaded)
+            except antivirus.ScanUnavailable:
+                logger.exception('Virus scan unavailable for upload %s', uploaded.name)
+                raise ValidationError('تعذر فحص الملف، حاول لاحقاً')
+            if not clean:
+                raise ValidationError(
+                    'تم رفض الملف %(name)s لاحتوائه على برمجيات ضارة',
+                    params={'name': uploaded.name})
+
+
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    """Several files in one input. Set ``order`` to enforce that order's quota."""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('widget', MultipleFileInput(attrs={'class': 'form-control'}))
+        super().__init__(*args, **kwargs)
+        self.order = None
+
+    def clean(self, data, initial=None):
+        single_file_clean = super().clean
+        items = data if isinstance(data, (list, tuple)) else [data]
+        files = [f for f in (single_file_clean(item, initial) for item in items) if f]
+        if self.required and not files:
+            raise ValidationError(self.error_messages['required'], code='required')
+        if files:
+            validate_document_files(files, self.order)
+        return files
 
 
 class WorkOrderForm(forms.ModelForm):
+    source_files = MultipleFileField(label='المستندات المطلوب ترجمتها', required=False)
+
     class Meta:
         model = WorkOrder
         fields = [
@@ -161,11 +232,46 @@ class TranslatorServiceForm(forms.Form):
         required=False,
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
     )
+    translation_files = MultipleFileField(label='ملفات الترجمة', required=False)
+
+    def __init__(self, *args, require_translation=False,
+                 has_existing_translation=False, order=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.require_translation = require_translation
+        self.has_existing_translation = has_existing_translation
+        self.fields['translation_files'].order = order
 
     def clean(self):
         cleaned_data = super().clean()
+        if (self.require_translation and not self.has_existing_translation
+                and not cleaned_data.get('translation_files')
+                and not self.has_error('translation_files')):
+            self.add_error('translation_files', 'يرجى رفع ملف الترجمة قبل تسجيل الخدمة')
         hours = cleaned_data.get('actual_hours')
         pages = cleaned_data.get('actual_pages')
         if not hours and not pages:
             raise forms.ValidationError('يرجى إدخال الساعات الفعلية أو الصفحات الفعلية')
         return cleaned_data
+
+
+class DocumentUploadForm(forms.Form):
+    files = MultipleFileField(label='الملفات')
+    note = forms.CharField(label='ملاحظة', required=False, max_length=2000)
+
+    def __init__(self, *args, order=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['files'].order = order
+
+
+class DocumentNoteForm(forms.Form):
+    body = forms.CharField(label='الملاحظة', max_length=4000)
+    document = forms.ModelChoiceField(
+        label='الملف المعني', queryset=OrderDocument.objects.none(), required=False,
+    )
+
+    def __init__(self, *args, language_line=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if language_line is not None:
+            self.fields['document'].queryset = language_line.documents.filter(
+                kind=OrderDocument.Kind.TRANSLATION
+            )

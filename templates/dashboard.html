@@ -317,12 +317,24 @@
                         <i class="bi bi-pencil-square"></i> مهام قيد التنفيذ
                     </div>
                     <div class="card-body">
+                        {% if revision_assignments %}
+                        <div class="alert alert-danger py-2 small">
+                            <i class="bi bi-flag-fill"></i> ملاحظات بحاجة لمعالجة:
+                            {% for a in revision_assignments %}
+                            <a href="{% url 'order_detail' a.work_order.pk %}#line-{{ a.language_line.pk }}" class="alert-link d-block">
+                                {{ a.work_order.order_number }} — {{ a.language_line.language_display }} ({{ a.open_notes }})
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                         {% if active_assignments %}
                         <div class="list-group list-group-flush">
                             {% for a in active_assignments %}
                             <a href="{% url 'translator_log_service' a.pk %}" class="list-group-item list-group-item-action">
                                 <strong>{{ a.work_order.order_number }}</strong>
+                                {% if a.open_notes %}<span class="badge bg-danger">ملاحظات بحاجة لمعالجة ({{ a.open_notes }})</span>{% endif %}
                                 <br><small>{{ a.language_line.language_display }} - {{ a.work_order.get_service_type_display }}</small>
+                                {% if a.source_count %}<br><small class="text-muted"><i class="bi bi-paperclip"></i> {{ a.source_count }} مستند</small>{% endif %}
                             </a>
                             {% endfor %}
                         </div>

@@ -82,6 +82,21 @@
         {% endif %}
         {% endfor %}
 
+        {% include "orders/_documents_card.html" %}
+
+        {% if open_notes_count %}
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-octagon-fill"></i>
+            توجد {{ open_notes_count }} ملاحظة مراجعة بانتظار معالجة المترجم. لا يمكن اعتماد الأمر حتى تتم معالجتها.
+        </div>
+        {% endif %}
+        {% if order.is_written and lines_missing_translation %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            لم تُرفع الترجمة بعد لـ {{ lines_missing_translation }} من بنود اللغة.
+        </div>
+        {% endif %}
+
         <!-- Approval Form -->
         <form method="post">
             {% csrf_token %}
@@ -92,7 +107,8 @@
                         <div class="card-body text-center">
                             <h5 class="text-success"><i class="bi bi-check-circle"></i> اعتماد</h5>
                             <p class="text-muted">أوافق على الخدمة الفعلية المقدمة</p>
-                            <button type="submit" name="action" value="approve" class="btn btn-success btn-lg w-100">
+                            {# formnovalidate: the dispute reason is required only when disputing #}
+                            <button type="submit" name="action" value="approve" formnovalidate class="btn btn-success btn-lg w-100" {% if open_notes_count %}disabled title="توجد ملاحظات مراجعة مفتوحة"{% endif %}>
                                 <i class="bi bi-check-lg"></i> اعتماد أمر التكليف
                             </button>
                             <small class="text-muted d-block mt-2">يعتبر ذلك توقيعاً رقمياً</small>

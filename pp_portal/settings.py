@@ -174,5 +174,69 @@ LIVEKIT_HTTP_URL = os.environ.get('LIVEKIT_HTTP_URL', 'http://127.0.0.1:7880')
 # Recording storage (egress container writes here)
 RECORDING_ROOT = os.environ.get('RECORDING_ROOT', '/var/www/gfad-portal/storage/app/recordings')
 
+# Base address for links in e-mails
+SITE_URL = os.environ.get('SITE_URL', 'http://127.0.0.1:8000').rstrip('/')
+
+# Work-order documents (files to translate and delivered translations). They are
+# private: never under MEDIA_ROOT, which nginx serves without login. Downloads go
+# through authenticated views (X-Accel-Redirect locally, presigned URLs on S3).
+DOCUMENT_STORAGE = os.environ.get('DOCUMENT_STORAGE', 'local')
+PRIVATE_FILES_ROOT = os.environ.get('PRIVATE_FILES_ROOT', str(BASE_DIR / 'private'))
+DOCUMENT_MAX_UPLOAD_SIZE = int(os.environ.get('DOCUMENT_MAX_UPLOAD_SIZE', 25 * 1024 * 1024))
+DOCUMENT_MAX_ORDER_TOTAL_SIZE = int(
+    os.environ.get('DOCUMENT_MAX_ORDER_TOTAL_SIZE', 500 * 1024 * 1024)
+)
+DOCUMENT_ALLOWED_EXTENSIONS = [
+    ext.strip().lower().lstrip('.')
+    for ext in os.environ.get(
+        'DOCUMENT_ALLOWED_EXTENSIONS',
+        'pdf,doc,docx,xls,xlsx,ppt,pptx,rtf,txt,jpg,jpeg,png,tif,tiff',
+    ).split(',')
+    if ext.strip()
+]
+# ClamAV scanning: 'off', or 'required' (uploads are refused while clamd is down).
+DOCUMENT_VIRUS_SCAN = os.environ.get('DOCUMENT_VIRUS_SCAN', 'off')
+CLAMD_ADDRESS = os.environ.get('CLAMD_ADDRESS', 'unix:///var/run/clamav/clamd.ctl')
+# Days after approval before purge_documents may delete a completed order's
+# files. Unset keeps files indefinitely.
+DOCUMENT_RETENTION_DAYS = (
+    int(os.environ['DOCUMENT_RETENTION_DAYS'])
+    if os.environ.get('DOCUMENT_RETENTION_DAYS') else None
+)
+
+if DOCUMENT_VIRUS_SCAN not in ('off', 'required'):
+    raise ImproperlyConfigured("DOCUMENT_VIRUS_SCAN must be 'off' or 'required'.")
+
+if DOCUMENT_STORAGE == 'local':
+    _DOCUMENTS_BACKEND = {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        'OPTIONS': {'location': PRIVATE_FILES_ROOT},
+    }
+elif DOCUMENT_STORAGE == 's3':
+    if not os.environ.get('AWS_STORAGE_BUCKET_NAME'):
+        raise ImproperlyConfigured('DOCUMENT_STORAGE=s3 requires AWS_STORAGE_BUCKET_NAME.')
+    # Credentials come from AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY or the instance role.
+    _DOCUMENTS_BACKEND = {
+        'BACKEND': 'storages.backends.s3.S3Storage',
+        'OPTIONS': {
+            'bucket_name': os.environ['AWS_STORAGE_BUCKET_NAME'],
+            'region_name': os.environ.get('AWS_S3_REGION_NAME') or None,
+            'location': 'documents',
+            'default_acl': 'private',
+            'querystring_auth': True,
+            'querystring_expire': 60,
+            'file_overwrite': False,
+            'object_parameters': {'ServerSideEncryption': 'AES256'},
+        },
+    }
+else:
+    raise ImproperlyConfigured("DOCUMENT_STORAGE must be 'local' or 's3'.")
+
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+    'documents': _DOCUMENTS_BACKEND,
+}
+
 # OpenAI API (used for caption translation)
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')

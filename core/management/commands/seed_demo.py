@@ -4,6 +4,7 @@ Creates the accounts the local workflow test and manual QA expect:
     pp_staff / pp123          -> PP_STAFF
     admin / admin123          -> SMARTWORLD_ADMIN (superuser)
     contract_mgr / cm123      -> CONTRACT_MANAGER
+    translator / tr123        -> TRANSLATOR (English and Urdu)
 
 Idempotent: safe to re-run. Refuses to run when DEBUG is off, since the
 passwords are well known.
@@ -13,7 +14,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 
-from core.models import Prosecution, Prosecutor, UserProfile
+from core.models import Language, Prosecution, Prosecutor, TranslatorProfile, UserProfile
 
 DEMO_USERS = [
     # username, password, first, last, role, is_superuser, link_prosecution
@@ -23,6 +24,8 @@ DEMO_USERS = [
      UserProfile.Role.SMARTWORLD_ADMIN, True, False),
     ('contract_mgr', 'cm123', 'Contract', 'Manager',
      UserProfile.Role.CONTRACT_MANAGER, False, False),
+    ('translator', 'tr123', 'Demo', 'Translator',
+     UserProfile.Role.TRANSLATOR, False, False),
 ]
 
 
@@ -77,5 +80,12 @@ class Command(BaseCommand):
             self.stdout.write(
                 f'  {"+" if created else "~"} {username} / {password}  ({role})'
             )
+
+        translator_profile, _ = TranslatorProfile.objects.get_or_create(
+            user=User.objects.get(username='translator')
+        )
+        translator_profile.languages.set(
+            Language.objects.filter(name_en__in=['English', 'Urdu'])
+        )
 
         self.stdout.write(self.style.SUCCESS('Demo data seeded.'))

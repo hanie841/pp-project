@@ -15,6 +15,13 @@ urlpatterns = [
     path('orders/<int:pk>/approve/', views.order_approve, name='order_approve'),
     path('orders/<int:pk>/certificate/', views.order_certificate, name='order_certificate'),
     path('orders/<int:pk>/certificate/finalize/', views.certificate_finalize, name='certificate_finalize'),
+    # Documents
+    path('orders/<int:pk>/documents/upload/', views.document_upload_source, name='document_upload_source'),
+    path('orders/<int:pk>/documents/translation/<int:ll_pk>/upload/', views.document_upload_translation, name='document_upload_translation'),
+    path('orders/<int:pk>/documents/translation/<int:ll_pk>/notes/add/', views.document_note_add, name='document_note_add'),
+    path('orders/<int:pk>/documents/<int:doc_pk>/download/', views.document_download, name='document_download'),
+    path('orders/<int:pk>/documents/<int:doc_pk>/preview/', views.document_preview, name='document_preview'),
+    path('orders/<int:pk>/documents/<int:doc_pk>/delete/', views.document_delete, name='document_delete'),
     path('orders/<int:pk>/pdf/', views.order_pdf, name='order_pdf'),
     path('orders/<int:pk>/certificate/pdf/', views.certificate_pdf, name='certificate_pdf'),
     # Conference

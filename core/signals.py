@@ -1,7 +1,8 @@
 from django.core.mail import EmailMessage
 from django.conf import settings
 from django.template.loader import render_to_string
-from .models import UserProfile
+from django.urls import reverse
+from .models import OrderAssignment, OrderDocument, UserProfile
 import logging
 import os
 import base64
@@ -17,6 +18,47 @@ def _get_emails_by_role(role):
         .exclude(user__email='')
         .values_list('user__email', flat=True)
     )
+
+
+def _order_url(order, anchor=''):
+    url = settings.SITE_URL + reverse('order_detail', args=[order.pk])
+    return f'{url}#{anchor}' if anchor else url
+
+
+def _excluding(recipients, user):
+    """Deduplicated recipients without the person who triggered the e-mail."""
+    return [email for email in set(recipients) if email and email != user.email]
+
+
+def _assigned_translator_emails(order, language_line=None):
+    assignments = order.assignments.exclude(
+        status=OrderAssignment.Status.DECLINED
+    ).select_related('translator')
+    if language_line is not None:
+        assignments = assignments.filter(language_line=language_line)
+    return [a.translator.email for a in assignments if a.translator.email]
+
+
+def _prosecution_staff_emails(order):
+    return list(
+        UserProfile.objects.filter(
+            role=UserProfile.Role.PP_STAFF, prosecution=order.prosecution,
+        ).exclude(user__email='').values_list('user__email', flat=True)
+    )
+
+
+def _documents_summary(order):
+    count = order.documents.filter(kind=OrderDocument.Kind.SOURCE).count()
+    if not count:
+        return ''
+    return (
+        f'المستندات المطلوب ترجمتها: {count} — متاحة في البوابة (يلزم تسجيل الدخول):\n'
+        f'{_order_url(order, "documents")}\n'
+    )
+
+
+def _file_list(documents):
+    return '\n'.join(f'- {document.original_name}' for document in documents)
 
 
 def _send(subject, message, recipients, attachments=None):
@@ -136,6 +178,7 @@ def notify_new_order(order):
             f'النيابة: {order.prosecution.name}\n'
             f'نوع الخدمة: {order.get_service_type_display()}\n'
             f'تاريخ التنفيذ: {order.execution_date}\n'
+            f'{_documents_summary(order)}'
             f'\nالمرفقات: أمر التكليف'
         ),
         recipients=list(set(recipients)),
@@ -159,7 +202,7 @@ def notify_meeting_link(order):
         f'الرابط: {order.location_detail}'
     )
     if order.conference_room:
-        conference_url = f'https://pp.swlt.ae/orders/{order.pk}/conference/'
+        conference_url = settings.SITE_URL + reverse('conference_join', args=[order.pk])
         message += f'\n\nللانضمام عبر غرفة الاجتماع المرئي:\n{conference_url}'
     _send(
         subject=f'رابط الاجتماع: {order.order_number}',
@@ -224,13 +267,15 @@ def notify_translator_assigned(assignment):
     """Email translator when assigned to an order"""
     if not assignment.translator.email:
         return
+    order = assignment.work_order
     _send(
-        subject=f'تعيين جديد: {assignment.work_order.order_number}',
+        subject=f'تعيين جديد: {order.order_number}',
         message=(
-            f'تم تعيينك للعمل على أمر التكليف رقم {assignment.work_order.order_number}\n'
+            f'تم تعيينك للعمل على أمر التكليف رقم {order.order_number}\n'
             f'اللغة: {assignment.language_line.language_display}\n'
-            f'نوع الخدمة: {assignment.work_order.get_service_type_display()}\n'
-            f'تاريخ التنفيذ: {assignment.work_order.execution_date}\n'
+            f'نوع الخدمة: {order.get_service_type_display()}\n'
+            f'تاريخ التنفيذ: {order.execution_date}\n'
+            f'{_documents_summary(order)}'
             f'يرجى تسجيل الدخول لقبول أو رفض التعيين.'
         ),
         recipients=[assignment.translator.email],
@@ -279,4 +324,69 @@ def notify_all_assignments_completed(order):
             f'الأمر بانتظار اعتماد النيابة.'
         ),
         recipients=list(set(recipients)),
+    )
+
+
+def notify_source_documents_uploaded(order, documents, uploaded_by):
+    """Files to translate were added — tell translators, SmartWorld and the CM (link only)."""
+    recipients = _assigned_translator_emails(order)
+    recipients += _get_emails_by_role(UserProfile.Role.SMARTWORLD_ADMIN)
+    recipients += _get_emails_by_role(UserProfile.Role.CONTRACT_MANAGER)
+    if order.created_by.email:
+        recipients.append(order.created_by.email)
+    _send(
+        subject=f'مستندات جديدة للترجمة: {order.order_number}',
+        message=(
+            f'تم رفع {len(documents)} مستند(ات) لأمر التكليف رقم {order.order_number}:\n'
+            f'{_file_list(documents)}\n\n'
+            f'المستندات متاحة في البوابة (يلزم تسجيل الدخول):\n'
+            f'{_order_url(order, "documents")}'
+        ),
+        recipients=_excluding(recipients, uploaded_by),
+    )
+
+
+def notify_translation_uploaded(order, language_line, documents, uploaded_by, addressed_count=0):
+    """A translation (or revision) was delivered — tell the prosecution side (link only)."""
+    recipients = _prosecution_staff_emails(order)
+    if order.created_by.email:
+        recipients.append(order.created_by.email)
+    recipients += _get_emails_by_role(UserProfile.Role.SMARTWORLD_ADMIN)
+    recipients += _get_emails_by_role(UserProfile.Role.CONTRACT_MANAGER)
+    heading = (
+        f'نسخة معدّلة — تمت معالجة {addressed_count} ملاحظة'
+        if addressed_count else 'ترجمة جديدة'
+    )
+    _send(
+        subject=f'{heading}: {order.order_number} ({language_line.language_display})',
+        message=(
+            f'{heading} لأمر التكليف رقم {order.order_number}\n'
+            f'اللغة: {language_line.language_display}\n'
+            f'{_file_list(documents)}\n\n'
+            f'يرجى المراجعة في البوابة (يلزم تسجيل الدخول):\n'
+            f'{_order_url(order, f"line-{language_line.pk}")}'
+        ),
+        recipients=_excluding(recipients, uploaded_by),
+    )
+
+
+def notify_revision_requested(note):
+    """A reviewer flagged a problem with a translation — tell the translator (link only)."""
+    order = note.work_order
+    recipients = _assigned_translator_emails(order, note.language_line)
+    if not recipients:
+        recipients = _get_emails_by_role(UserProfile.Role.SMARTWORLD_ADMIN)
+        recipients += _get_emails_by_role(UserProfile.Role.CONTRACT_MANAGER)
+    author = note.author.get_full_name() or note.author.username
+    file_line = f'الملف: {note.document.original_name}\n' if note.document else ''
+    _send(
+        subject=f'ملاحظات مراجعة على الترجمة: {order.order_number}',
+        message=(
+            f'أضاف {author} ملاحظة على ترجمة {note.language_line.language_display} '
+            f'لأمر التكليف رقم {order.order_number}:\n'
+            f'{file_line}\n{note.body}\n\n'
+            f'يرجى رفع نسخة معدّلة من البوابة (يلزم تسجيل الدخول):\n'
+            f'{_order_url(order, f"line-{note.language_line.pk}")}'
+        ),
+        recipients=_excluding(recipients, note.author),
     )

@@ -28,6 +28,31 @@
             </div>
         </div>
 
+        <!-- Order documents and review notes -->
+        <div class="card card-accent mb-4">
+            <div class="card-header card-header-navy">
+                <i class="bi bi-folder2-open"></i> مستندات الترجمة
+            </div>
+            <div class="card-body">
+                {% include "orders/_document_table.html" with docs=source_documents latest_pk=None empty_text="لا توجد مستندات مرفوعة لهذا الأمر" %}
+                {% if line_notes %}
+                <div class="small fw-bold mt-3 mb-2" style="color: var(--gold-dark);">
+                    <i class="bi bi-chat-left-text"></i> ملاحظات المراجعة
+                </div>
+                {% for note in line_notes %}
+                <div class="p-2 mb-2 rounded" style="{% if note.status == 'OPEN' %}background: #fdecea; border: 1px solid #e57373;{% else %}background: #f5f5f5;{% endif %}">
+                    <div class="small">
+                        <strong>{{ note.author.get_full_name|default:note.author.username }}</strong> — {{ note.created_at|date:"Y/m/d H:i" }}
+                        {% if note.document %} — {{ note.document.original_name }}{% endif %}
+                        <span class="badge {% if note.status == 'OPEN' %}bg-danger{% else %}bg-success{% endif %}">{{ note.get_status_display }}</span>
+                    </div>
+                    <div class="mt-1" style="white-space: pre-line;">{{ note.body }}</div>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
         <!-- Estimated vs Actual comparison -->
         <div class="card card-accent mb-4">
             <div class="card-header card-header-gold">
@@ -55,7 +80,7 @@
                     </div>
                 </div>
 
-                <form method="post">
+                <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     {% if form.non_field_errors %}
                     <div class="alert alert-danger">
@@ -82,6 +107,20 @@
                         {% endif %}
                     </div>
                     {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <strong>ملف الترجمة{% if order.is_written and not has_translation %} *{% endif %}</strong>
+                        </label>
+                        <input type="file" name="translation_files" multiple class="form-control" accept="{{ allowed_extensions }}"
+                               {% if order.is_written and not has_translation %}required{% endif %}>
+                        {% if has_translation %}
+                        <div class="form-text">تم رفع ترجمة لهذا البند مسبقاً؛ يمكنك رفع نسخة جديدة.</div>
+                        {% endif %}
+                        {% if form.translation_files.errors %}
+                        <div class="text-danger small">{% for error in form.translation_files.errors %}{{ error }}<br>{% endfor %}</div>
+                        {% endif %}
+                    </div>
 
                     <div class="mb-3">
                         <label class="form-label"><strong>ملاحظات</strong></label>

@@ -1,7 +1,12 @@
+import os
+import uuid
+
 from django.db import IntegrityError, models, transaction
 from django.conf import settings
 from django.utils import timezone
 from decimal import Decimal
+
+from .storage import get_document_storage
 
 NUMBER_SAVE_ATTEMPTS = 5
 
@@ -262,6 +267,13 @@ class WorkOrder(models.Model):
             self.ServiceType.REVIEW,
             self.ServiceType.AI_REVIEW,
         )
+
+    @property
+    def documents_total_size(self):
+        """Bytes used by this order's stored documents (counts toward its quota)."""
+        return self.documents.filter(purged_at__isnull=True).aggregate(
+            total=models.Sum('size')
+        )['total'] or 0
 
 
 class WorkOrderLanguage(models.Model):
@@ -597,3 +609,148 @@ class ConferenceRecording(models.Model):
 
     def __str__(self):
         return f'{self.work_order.order_number} - {self.started_at}'
+
+
+DOCUMENT_CONTENT_TYPES = {
+    'pdf': 'application/pdf',
+    'doc': 'application/msword',
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'xls': 'application/vnd.ms-excel',
+    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'ppt': 'application/vnd.ms-powerpoint',
+    'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'rtf': 'application/rtf',
+    'txt': 'text/plain',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'tif': 'image/tiff',
+    'tiff': 'image/tiff',
+}
+
+
+def content_type_for(filename):
+    """Content type from the extension; the browser-supplied type isn't trusted."""
+    extension = os.path.splitext(filename)[1].lower().lstrip('.')
+    return DOCUMENT_CONTENT_TYPES.get(extension, 'application/octet-stream')
+
+
+def order_document_path(instance, filename):
+    # Random name on disk: nothing user-controlled ends up in the path.
+    extension = os.path.splitext(filename)[1].lower()
+    return f'orders/{instance.work_order_id}/{instance.kind.lower()}/{uuid.uuid4().hex}{extension}'
+
+
+class OrderDocument(models.Model):
+    """مستند أمر التكليف - file to translate or delivered translation"""
+    class Kind(models.TextChoices):
+        SOURCE = 'SOURCE', 'مستند للترجمة'
+        TRANSLATION = 'TRANSLATION', 'ترجمة منجزة'
+
+    class ScanStatus(models.TextChoices):
+        CLEAN = 'CLEAN', 'سليم'
+        NOT_SCANNED = 'NOT_SCANNED', 'غير مفحوص'
+
+    PREVIEWABLE_CONTENT_TYPES = frozenset({'application/pdf', 'image/jpeg', 'image/png'})
+
+    work_order = models.ForeignKey(
+        WorkOrder, on_delete=models.CASCADE,
+        related_name='documents', verbose_name='أمر التكليف'
+    )
+    kind = models.CharField('النوع', max_length=20, choices=Kind.choices)
+    language_line = models.ForeignKey(
+        WorkOrderLanguage, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='documents', verbose_name='بند اللغة'
+    )
+    assignment = models.ForeignKey(
+        OrderAssignment, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='documents', verbose_name='التعيين'
+    )
+    file = models.FileField(
+        'الملف', upload_to=order_document_path,
+        storage=get_document_storage, max_length=255
+    )
+    original_name = models.CharField('اسم الملف', max_length=255)
+    size = models.PositiveBigIntegerField('الحجم')
+    content_type = models.CharField('نوع المحتوى', max_length=100)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+        related_name='uploaded_documents', verbose_name='رفع بواسطة'
+    )
+    uploaded_at = models.DateTimeField('تاريخ الرفع', auto_now_add=True)
+    note = models.TextField('ملاحظة', blank=True)
+    scan_status = models.CharField(
+        'نتيجة الفحص', max_length=20, choices=ScanStatus.choices,
+        default=ScanStatus.NOT_SCANNED
+    )
+    purged_at = models.DateTimeField('تاريخ الحذف (سياسة الاحتفاظ)', null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'مستند'
+        verbose_name_plural = 'المستندات'
+        ordering = ['-uploaded_at', '-pk']
+
+    def __str__(self):
+        return f'{self.work_order.order_number} - {self.original_name}'
+
+    @property
+    def is_previewable(self):
+        return self.purged_at is None and self.content_type in self.PREVIEWABLE_CONTENT_TYPES
+
+
+class DocumentNote(models.Model):
+    """ملاحظة مراجعة - revision request on a delivered translation"""
+    class Status(models.TextChoices):
+        OPEN = 'OPEN', 'بحاجة لمعالجة'
+        ADDRESSED = 'ADDRESSED', 'تمت المعالجة'
+
+    work_order = models.ForeignKey(
+        WorkOrder, on_delete=models.CASCADE,
+        related_name='document_notes', verbose_name='أمر التكليف'
+    )
+    language_line = models.ForeignKey(
+        WorkOrderLanguage, on_delete=models.CASCADE,
+        related_name='document_notes', verbose_name='بند اللغة'
+    )
+    document = models.ForeignKey(
+        OrderDocument, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='review_notes', verbose_name='الملف المعني'
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+        related_name='document_notes', verbose_name='الكاتب'
+    )
+    body = models.TextField('الملاحظة')
+    status = models.CharField(
+        'الحالة', max_length=20, choices=Status.choices, default=Status.OPEN
+    )
+    created_at = models.DateTimeField('تاريخ الإضافة', auto_now_add=True)
+    addressed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='+', verbose_name='عولجت بواسطة'
+    )
+    addressed_at = models.DateTimeField('تاريخ المعالجة', null=True, blank=True)
+    addressed_by_document = models.ForeignKey(
+        OrderDocument, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='addressed_notes', verbose_name='النسخة المعدلة'
+    )
+
+    class Meta:
+        verbose_name = 'ملاحظة مراجعة'
+        verbose_name_plural = 'ملاحظات المراجعة'
+        ordering = ['created_at', 'pk']
+
+    def __str__(self):
+        return f'{self.work_order.order_number} - {self.get_status_display()}'
+
+    @classmethod
+    def address_open_notes(cls, language_line, document, user):
+        """Mark a line's open notes as addressed by a newly uploaded translation."""
+        return cls.objects.filter(
+            language_line=language_line, status=cls.Status.OPEN,
+        ).update(
+            status=cls.Status.ADDRESSED,
+            addressed_by=user,
+            addressed_at=timezone.now(),
+            addressed_by_document=document,
+        )

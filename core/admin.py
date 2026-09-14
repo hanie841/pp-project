@@ -6,7 +6,7 @@ from .models import (
     WorkOrder, WorkOrderLanguage, ServiceRecord,
     WorkOrderApproval, CompletionCertificate,
     TranslatorProfile, OrderAssignment, WorkflowConfig,
-    ConferenceRecording,
+    ConferenceRecording, OrderDocument, DocumentNote,
 )
 
 
@@ -95,13 +95,37 @@ class OrderAssignmentInline(admin.TabularInline):
     raw_id_fields = ('translator',)
 
 
+class OrderDocumentInline(admin.TabularInline):
+    """Read-only: files are downloaded through the portal, never via admin links."""
+    model = OrderDocument
+    extra = 0
+    can_delete = False
+    fields = ('kind', 'language_line', 'original_name', 'size', 'uploaded_by', 'uploaded_at', 'scan_status', 'purged_at')
+    readonly_fields = fields
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+class DocumentNoteInline(admin.TabularInline):
+    model = DocumentNote
+    extra = 0
+    can_delete = False
+    fields = ('language_line', 'author', 'body', 'status', 'created_at', 'addressed_by', 'addressed_at')
+    readonly_fields = fields
+    fk_name = 'work_order'
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(WorkOrder)
 class WorkOrderAdmin(admin.ModelAdmin):
     list_display = ('order_number', 'prosecution', 'prosecutor_display_admin', 'service_type', 'status', 'execution_date', 'created_at')
     list_filter = ('status', 'service_type', 'prosecution')
     search_fields = ('order_number', 'custom_prosecutor_name')
     list_editable = ('status',)
-    inlines = [WorkOrderLanguageInline, OrderAssignmentInline, ServiceRecordInline, WorkOrderApprovalInline, CompletionCertificateInline, ConferenceRecordingInline]
+    inlines = [WorkOrderLanguageInline, OrderAssignmentInline, OrderDocumentInline, DocumentNoteInline, ServiceRecordInline, WorkOrderApprovalInline, CompletionCertificateInline, ConferenceRecordingInline]
     readonly_fields = ('order_number', 'created_at', 'updated_at', 'submitted_at')
     fieldsets = (
         ('معلومات الطلب', {

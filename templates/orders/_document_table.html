@@ -1,0 +1,52 @@
+{% if docs %}
+<div class="table-responsive">
+    <table class="table table-hover table-gov mb-0">
+        <thead>
+            <tr>
+                <th>الملف</th>
+                <th>الحجم</th>
+                <th>رفع بواسطة</th>
+                <th>التاريخ</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for doc in docs %}
+            <tr>
+                <td>
+                    <i class="bi bi-file-earmark"></i> {{ doc.original_name }}
+                    {% if latest_pk and doc.pk == latest_pk %}<span class="badge bg-success">الأحدث</span>{% endif %}
+                    {% if doc.note %}<br><small class="text-muted">{{ doc.note }}</small>{% endif %}
+                </td>
+                <td dir="ltr">{{ doc.size|filesizeformat }}</td>
+                <td>{{ doc.uploaded_by.get_full_name|default:doc.uploaded_by.username }}</td>
+                <td>{{ doc.uploaded_at|date:"Y/m/d H:i" }}</td>
+                <td class="text-nowrap">
+                    {% if doc.purged_at %}
+                    <span class="text-muted small">حُذف وفق سياسة الاحتفاظ</span>
+                    {% else %}
+                    {% if doc.is_previewable %}
+                    <a href="{% url 'document_preview' order.pk doc.pk %}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-eye"></i> معاينة
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'document_download' order.pk doc.pk %}" class="btn btn-sm btn-navy">
+                        <i class="bi bi-download"></i> تحميل
+                    </a>
+                    {% if doc.can_delete %}
+                    <form method="post" action="{% url 'document_delete' order.pk doc.pk %}" class="d-inline" onsubmit="return confirm('حذف الملف؟');">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف"><i class="bi bi-trash"></i></button>
+                    </form>
+                    {% endif %}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-muted small py-2">{{ empty_text|default:"لا توجد ملفات" }}</div>
+{% endif %}

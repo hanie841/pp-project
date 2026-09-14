@@ -2,33 +2,41 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
-from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django.http import (
+    FileResponse, Http404, HttpResponse, HttpResponseForbidden,
+    HttpResponseRedirect, JsonResponse,
+)
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html_join
-from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.http import content_disposition_header, url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Sum, Q
+from django.db.models import Count, Sum, Q
 from decimal import Decimal
+import os
 
 from .models import (
     WorkOrder, WorkOrderLanguage, ServiceRecord,
     WorkOrderApproval, CompletionCertificate,
     Prosecution, Prosecutor, Language, UserProfile,
     TranslatorProfile, OrderAssignment, WorkflowConfig,
-    ConferenceRecording,
+    ConferenceRecording, OrderDocument, DocumentNote, content_type_for,
 )
 from .forms import (
     WorkOrderForm, WorkOrderLanguageFormSet,
     ServiceRecordForm, MeetingLinkForm, DisputeForm,
     AssignTranslatorForm, TranslatorServiceForm,
+    DocumentUploadForm, DocumentNoteForm,
 )
 from .signals import (
     notify_new_order, notify_order_accepted, notify_meeting_link,
     notify_actuals_logged, notify_pp_approved, notify_pp_disputed,
     notify_translator_assigned, notify_assignment_accepted,
     notify_assignment_declined, notify_all_assignments_completed,
+    notify_source_documents_uploaded, notify_translation_uploaded,
+    notify_revision_requested,
 )
 from .livekit_utils import (
     create_room, generate_join_token, update_room_metadata,
@@ -45,13 +53,7 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            next_url = request.GET.get('next', '')
-            if not url_has_allowed_host_and_scheme(
-                next_url, allowed_hosts={request.get_host()},
-                require_https=request.is_secure(),
-            ):
-                next_url = '/'
-            return redirect(next_url)
+            return redirect(_safe_redirect_url(request, request.GET.get('next', ''), '/'))
         else:
             messages.error(request, 'اسم المستخدم أو كلمة المرور غير صحيحة')
     return render(request, 'registration/login.html')
@@ -102,6 +104,213 @@ def _can_view_order(user, profile, order):
 
 def _can_finalize_certificate(user, profile):
     return user.is_superuser or bool(profile and profile.is_smartworld_admin)
+
+
+def _safe_redirect_url(request, url, fallback):
+    """``url`` if it stays on this site, otherwise ``fallback``."""
+    if url_has_allowed_host_and_scheme(
+        url, allowed_hosts={request.get_host()}, require_https=request.is_secure(),
+    ):
+        return url
+    return fallback
+
+
+# ── Document permissions & helpers ────────────────────────────────────
+
+def _can_access_documents(user, profile, order):
+    """Readers of the order, except translators only see files of orders they work on."""
+    if not _can_view_order(user, profile, order):
+        return False
+    if user.is_superuser or not (profile and profile.is_translator):
+        return True
+    return order.assignments.filter(translator=user).exclude(
+        status=OrderAssignment.Status.DECLINED
+    ).exists()
+
+
+def _is_document_staff(user, profile):
+    return user.is_superuser or bool(
+        profile and (profile.is_smartworld or profile.is_contract_manager)
+    )
+
+
+def _can_supply_and_review_documents(user, profile, order):
+    """PP staff of the order, SmartWorld and the CM upload files to translate
+    and raise revision notes on translations."""
+    if order.status == WorkOrder.Status.COMPLETED:
+        return False
+    if _is_document_staff(user, profile):
+        return True
+    return bool(profile and profile.is_pp_staff) and _can_view_order(user, profile, order)
+
+
+def _can_upload_translation(user, profile, order, language_line):
+    if order.status == WorkOrder.Status.COMPLETED:
+        return False
+    if _is_document_staff(user, profile):
+        return True
+    return bool(profile and profile.is_translator) and language_line.assignments.filter(
+        translator=user,
+        status__in=[OrderAssignment.Status.ACCEPTED, OrderAssignment.Status.COMPLETED],
+    ).exists()
+
+
+def _can_delete_document(user, order, document):
+    return order.status != WorkOrder.Status.COMPLETED and (
+        user.is_superuser or document.uploaded_by_id == user.pk
+    )
+
+
+def _accept_attribute():
+    return ','.join(f'.{ext}' for ext in settings.DOCUMENT_ALLOWED_EXTENSIONS)
+
+
+def _document_context(request, order, profile):
+    """Context for the documents card: source files, translations per line, notes."""
+    user = request.user
+    documents = list(order.documents.select_related('uploaded_by'))
+    for document in documents:
+        document.can_delete = _can_delete_document(user, order, document)
+    notes = list(order.document_notes.select_related(
+        'author', 'addressed_by', 'document', 'addressed_by_document',
+    ))
+
+    lines = []
+    for line in order.languages.select_related('language'):
+        translations = [
+            d for d in documents
+            if d.kind == OrderDocument.Kind.TRANSLATION and d.language_line_id == line.pk
+        ]
+        line_notes = [n for n in notes if n.language_line_id == line.pk]
+        lines.append({
+            'line': line,
+            'translations': translations,
+            'latest_pk': translations[0].pk if translations else None,
+            'notes': line_notes,
+            'open_notes': sum(n.status == DocumentNote.Status.OPEN for n in line_notes),
+            'can_upload': _can_upload_translation(user, profile, order, line),
+        })
+
+    used = sum(d.size for d in documents if d.purged_at is None)
+    limit = settings.DOCUMENT_MAX_ORDER_TOTAL_SIZE
+    can_supply = _can_supply_and_review_documents(user, profile, order)
+    return {
+        'can_access_documents': _can_access_documents(user, profile, order),
+        'can_upload_source': can_supply,
+        'can_add_note': can_supply,
+        'source_documents': [d for d in documents if d.kind == OrderDocument.Kind.SOURCE],
+        'translation_lines': lines,
+        'open_notes_count': sum(item['open_notes'] for item in lines),
+        'lines_missing_translation': sum(1 for item in lines if not item['translations']),
+        'documents_used': used,
+        'documents_limit': limit,
+        'documents_used_percent': min(100, used * 100 // limit) if limit else 0,
+        'allowed_extensions': _accept_attribute(),
+    }
+
+
+def _translator_assignments(user, limit=None):
+    """A translator's assignments by status, with source-file and open-note counts."""
+    assignments = OrderAssignment.objects.filter(translator=user).select_related(
+        'work_order', 'work_order__prosecution', 'language_line', 'language_line__language',
+    ).annotate(
+        source_count=Count(
+            'work_order__documents', distinct=True,
+            filter=Q(work_order__documents__kind=OrderDocument.Kind.SOURCE),
+        ),
+        open_notes=Count(
+            'language_line__document_notes', distinct=True,
+            filter=Q(language_line__document_notes__status=DocumentNote.Status.OPEN),
+        ),
+    )
+
+    def by_status(status, default_limit=None):
+        rows = assignments.filter(status=status)
+        cap = limit or default_limit
+        return rows[:cap] if cap else rows
+
+    return {
+        'pending_assignments': by_status(OrderAssignment.Status.PENDING),
+        'active_assignments': by_status(OrderAssignment.Status.ACCEPTED),
+        'completed_assignments': by_status(OrderAssignment.Status.COMPLETED, 20),
+        'revision_assignments': assignments.filter(
+            status=OrderAssignment.Status.COMPLETED, open_notes__gt=0,
+        ),
+    }
+
+
+def _save_documents(order, files, kind, user, *, language_line=None, assignment=None, note=''):
+    """Store uploaded files as OrderDocument rows. Call inside a transaction."""
+    scan_status = (
+        OrderDocument.ScanStatus.CLEAN if settings.DOCUMENT_VIRUS_SCAN == 'required'
+        else OrderDocument.ScanStatus.NOT_SCANNED
+    )
+    documents = []
+    try:
+        for uploaded in files:
+            document = OrderDocument(
+                work_order=order, kind=kind, language_line=language_line,
+                assignment=assignment, uploaded_by=user, note=note,
+                original_name=os.path.basename(uploaded.name)[:255],
+                size=uploaded.size, content_type=content_type_for(uploaded.name),
+                scan_status=scan_status,
+            )
+            document.file.save(uploaded.name, uploaded, save=False)
+            documents.append(document)
+            document.save()
+    except Exception:
+        # Don't leave stored files behind when their rows weren't created.
+        for document in documents:
+            document.file.storage.delete(document.file.name)
+        raise
+    return documents
+
+
+def _save_translation(order, language_line, files, user, *, assignment=None, note=''):
+    """Store a translation; it addresses the line's open revision notes."""
+    documents = _save_documents(
+        order, files, OrderDocument.Kind.TRANSLATION, user,
+        language_line=language_line, assignment=assignment, note=note,
+    )
+    addressed = DocumentNote.address_open_notes(language_line, documents[0], user)
+    return documents, addressed
+
+
+def _documents_url(order, anchor='documents'):
+    return f"{reverse('order_detail', args=[order.pk])}#{anchor}"
+
+
+def _redirect_back(request, fallback):
+    return redirect(_safe_redirect_url(request, request.POST.get('next', ''), fallback))
+
+
+def _flash_form_errors(request, form):
+    for errors in form.errors.values():
+        for error in errors:
+            messages.error(request, error)
+
+
+def _uses_presigned_urls(storage):
+    """S3-style storages hand out short-lived signed URLs instead of local paths."""
+    return hasattr(storage, 'bucket_name')
+
+
+def _private_file_response(full_path, internal_uri, content_type, disposition):
+    """Serve a file that must stay behind login.
+
+    In production nginx streams it from an ``internal`` location via
+    X-Accel-Redirect; in development Django serves it directly.
+    """
+    if settings.DEBUG:
+        if not os.path.exists(full_path):
+            return HttpResponse('الملف غير موجود', status=404)
+        response = FileResponse(open(full_path, 'rb'), content_type=content_type)
+    else:
+        response = HttpResponse(content_type=content_type)
+        response['X-Accel-Redirect'] = internal_uri
+    response['Content-Disposition'] = disposition
+    response['X-Content-Type-Options'] = 'nosniff'
+    return response
 
 
 @login_required
@@ -172,20 +381,8 @@ def dashboard(request):
             status=WorkOrder.Status.PENDING_APPROVAL
         )[:10]
     elif profile and profile.is_translator:
-        context['pending_assignments'] = OrderAssignment.objects.filter(
-            translator=request.user,
-            status=OrderAssignment.Status.PENDING,
-        ).select_related('work_order', 'language_line', 'language_line__language')[:10]
-        context['active_assignments'] = OrderAssignment.objects.filter(
-            translator=request.user,
-            status=OrderAssignment.Status.ACCEPTED,
-        ).select_related('work_order', 'language_line', 'language_line__language')[:10]
-        context['completed_assignments'] = OrderAssignment.objects.filter(
-            translator=request.user,
-            status=OrderAssignment.Status.COMPLETED,
-        ).select_related('work_order', 'language_line', 'language_line__language')[:10]
-        config = WorkflowConfig.get_config()
-        context['workflow_mode'] = config.mode
+        context.update(_translator_assignments(request.user, limit=10))
+        context['workflow_mode'] = WorkflowConfig.get_config().mode
 
     recent_statuses = [
         WorkOrder.Status.SUBMITTED, WorkOrder.Status.ACCEPTED,
@@ -223,16 +420,21 @@ def order_create(request):
         return HttpResponseForbidden('غير مسموح')
 
     if request.method == 'POST':
-        form = WorkOrderForm(request.POST, user=request.user)
+        form = WorkOrderForm(request.POST, request.FILES, user=request.user)
         formset = WorkOrderLanguageFormSet(request.POST)
         if form.is_valid() and formset.is_valid():
-            order = form.save(commit=False)
-            order.created_by = request.user
-            order.status = WorkOrder.Status.SUBMITTED
-            order.submitted_at = timezone.now()
-            order.save()
-            formset.instance = order
-            formset.save()
+            with transaction.atomic():
+                order = form.save(commit=False)
+                order.created_by = request.user
+                order.status = WorkOrder.Status.SUBMITTED
+                order.submitted_at = timezone.now()
+                order.save()
+                formset.instance = order
+                formset.save()
+                _save_documents(
+                    order, form.cleaned_data['source_files'],
+                    OrderDocument.Kind.SOURCE, request.user,
+                )
             notify_new_order(order)
             messages.success(request, f'تم تقديم أمر التكليف رقم {order.order_number} بنجاح')
             return redirect('order_detail', pk=order.pk)
@@ -248,6 +450,8 @@ def order_create(request):
         'formset': formset,
         'profile': profile,
         'rate_data': rate_data,
+        'allowed_extensions': _accept_attribute(),
+        'max_upload_size': settings.DOCUMENT_MAX_UPLOAD_SIZE,
     })
 
 
@@ -279,6 +483,7 @@ def order_detail(request, pk):
         'assignments': assignments,
         'workflow_mode': config.mode,
         'recordings': recordings,
+        **_document_context(request, order, profile),
     })
 
 
@@ -417,6 +622,13 @@ def order_approve(request, pk):
         approval = order.approval
 
         if action == 'approve':
+            open_notes = order.document_notes.filter(status=DocumentNote.Status.OPEN).count()
+            if open_notes:
+                messages.error(
+                    request,
+                    f'لا يمكن الاعتماد: توجد {open_notes} ملاحظة مراجعة بانتظار معالجة المترجم',
+                )
+                return redirect('order_approve', pk=pk)
             approval.pp_approved_by = request.user
             approval.pp_approved_at = timezone.now()
             approval.save()
@@ -453,6 +665,7 @@ def order_approve(request, pk):
         'service_records': service_records,
         'dispute_form': dispute_form,
         'profile': profile,
+        **_document_context(request, order, profile),
     })
 
 
@@ -669,28 +882,9 @@ def translator_dashboard(request):
     if not request.user.is_superuser and (not profile or not profile.is_translator):
         return HttpResponseForbidden('غير مسموح')
 
-    pending = OrderAssignment.objects.filter(
-        translator=request.user,
-        status=OrderAssignment.Status.PENDING,
-    ).select_related('work_order', 'language_line', 'language_line__language')
-
-    accepted = OrderAssignment.objects.filter(
-        translator=request.user,
-        status=OrderAssignment.Status.ACCEPTED,
-    ).select_related('work_order', 'language_line', 'language_line__language')
-
-    completed = OrderAssignment.objects.filter(
-        translator=request.user,
-        status=OrderAssignment.Status.COMPLETED,
-    ).select_related('work_order', 'language_line', 'language_line__language')[:20]
-
-    config = WorkflowConfig.get_config()
-
     return render(request, 'orders/translator_dashboard.html', {
-        'pending_assignments': pending,
-        'active_assignments': accepted,
-        'completed_assignments': completed,
-        'workflow_mode': config.mode,
+        **_translator_assignments(request.user),
+        'workflow_mode': WorkflowConfig.get_config().mode,
         'profile': profile,
     })
 
@@ -848,28 +1042,51 @@ def translator_log_service(request, pk):
 
     order = assignment.work_order
     lang_line = assignment.language_line
-    form = TranslatorServiceForm(request.POST or None)
+    has_translation = lang_line.documents.filter(
+        kind=OrderDocument.Kind.TRANSLATION, purged_at__isnull=True,
+    ).exists()
+    is_post = request.method == 'POST'
+    form = TranslatorServiceForm(
+        request.POST if is_post else None,
+        request.FILES if is_post else None,
+        require_translation=order.is_written,
+        has_existing_translation=has_translation,
+        order=order,
+    )
 
-    if request.method == 'POST' and form.is_valid():
-        # Create ServiceRecord
-        record = ServiceRecord(
-            work_order=order,
-            language=lang_line.language,
-            num_translators=1,
-            notes=form.cleaned_data.get('notes', ''),
-        )
-        if form.cleaned_data.get('actual_hours'):
-            record.actual_hours = form.cleaned_data['actual_hours']
-        if form.cleaned_data.get('actual_pages'):
-            record.actual_pages = form.cleaned_data['actual_pages']
-        record.calculate_amount()
-        record.save()
+    if is_post and form.is_valid():
+        documents, addressed = [], 0
+        with transaction.atomic():
+            # Create ServiceRecord
+            record = ServiceRecord(
+                work_order=order,
+                language=lang_line.language,
+                num_translators=1,
+                notes=form.cleaned_data.get('notes', ''),
+            )
+            if form.cleaned_data.get('actual_hours'):
+                record.actual_hours = form.cleaned_data['actual_hours']
+            if form.cleaned_data.get('actual_pages'):
+                record.actual_pages = form.cleaned_data['actual_pages']
+            record.calculate_amount()
+            record.save()
 
-        # Link record to assignment and mark completed
-        assignment.service_record = record
-        assignment.status = OrderAssignment.Status.COMPLETED
-        assignment.completed_at = timezone.now()
-        assignment.save()
+            if form.cleaned_data['translation_files']:
+                documents, addressed = _save_translation(
+                    order, lang_line, form.cleaned_data['translation_files'], request.user,
+                    assignment=assignment, note=form.cleaned_data.get('notes', ''),
+                )
+
+            # Link record to assignment and mark completed
+            assignment.service_record = record
+            assignment.status = OrderAssignment.Status.COMPLETED
+            assignment.completed_at = timezone.now()
+            assignment.save()
+
+        if documents:
+            notify_translation_uploaded(
+                order, lang_line, documents, request.user, addressed_count=addressed,
+            )
 
         # Check if ALL assignments for this order are completed
         total_active = order.assignments.exclude(
@@ -900,6 +1117,10 @@ def translator_log_service(request, pk):
         'lang_line': lang_line,
         'form': form,
         'profile': _get_profile(request.user),
+        'source_documents': order.documents.filter(kind=OrderDocument.Kind.SOURCE),
+        'line_notes': lang_line.document_notes.select_related('author', 'document'),
+        'has_translation': has_translation,
+        'allowed_extensions': _accept_attribute(),
     })
 
 
@@ -1161,26 +1382,11 @@ def recording_download(request, pk, rec_pk):
         status=ConferenceRecording.Status.COMPLETED,
     )
 
-    full_path = os.path.join(settings.RECORDING_ROOT, recording.file_path)
-    filename = os.path.basename(recording.file_path)
-
-    # Use nginx X-Accel-Redirect in production
-    if not settings.DEBUG:
-        response = HttpResponse()
-        response['X-Accel-Redirect'] = f'/internal-recordings/{recording.file_path}'
-        response['Content-Type'] = 'video/mp4'
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        return response
-
-    # Dev fallback: serve via Django
-    from django.http import FileResponse
-    if not os.path.exists(full_path):
-        return HttpResponse('الملف غير موجود', status=404)
-    return FileResponse(
-        open(full_path, 'rb'),
-        content_type='video/mp4',
-        as_attachment=True,
-        filename=filename,
+    return _private_file_response(
+        os.path.join(settings.RECORDING_ROOT, recording.file_path),
+        f'/internal-recordings/{recording.file_path}',
+        'video/mp4',
+        content_disposition_header(True, os.path.basename(recording.file_path)),
     )
 
 
@@ -1274,3 +1480,137 @@ def captions_translate(request, pk):
         import logging
         logging.getLogger(__name__).error(f'Caption translation failed: {e}')
         return JsonResponse({'error': 'Translation failed'}, status=502)
+
+
+# ── Document Views ───────────────────────────────────────────────────
+
+@login_required
+@require_POST
+def document_upload_source(request, pk):
+    """Upload files to be translated."""
+    order = get_object_or_404(WorkOrder, pk=pk)
+    if not _can_supply_and_review_documents(request.user, _get_profile(request.user), order):
+        return HttpResponseForbidden('غير مسموح')
+
+    fallback = _documents_url(order)
+    form = DocumentUploadForm(request.POST, request.FILES, order=order)
+    if not form.is_valid():
+        _flash_form_errors(request, form)
+        return _redirect_back(request, fallback)
+
+    with transaction.atomic():
+        documents = _save_documents(
+            order, form.cleaned_data['files'], OrderDocument.Kind.SOURCE,
+            request.user, note=form.cleaned_data['note'],
+        )
+    notify_source_documents_uploaded(order, documents, request.user)
+    messages.success(request, f'تم رفع {len(documents)} ملف(ات)')
+    return _redirect_back(request, fallback)
+
+
+@login_required
+@require_POST
+def document_upload_translation(request, pk, ll_pk):
+    """Upload the translation for a language line (a revision addresses open notes)."""
+    order = get_object_or_404(WorkOrder, pk=pk)
+    language_line = get_object_or_404(WorkOrderLanguage, pk=ll_pk, work_order=order)
+    if not _can_upload_translation(request.user, _get_profile(request.user), order, language_line):
+        return HttpResponseForbidden('غير مسموح')
+
+    fallback = _documents_url(order, f'line-{language_line.pk}')
+    form = DocumentUploadForm(request.POST, request.FILES, order=order)
+    if not form.is_valid():
+        _flash_form_errors(request, form)
+        return _redirect_back(request, fallback)
+
+    assignment = language_line.assignments.filter(translator=request.user).exclude(
+        status=OrderAssignment.Status.DECLINED
+    ).first()
+    with transaction.atomic():
+        documents, addressed = _save_translation(
+            order, language_line, form.cleaned_data['files'], request.user,
+            assignment=assignment, note=form.cleaned_data['note'],
+        )
+    notify_translation_uploaded(
+        order, language_line, documents, request.user, addressed_count=addressed,
+    )
+    messages.success(request, f'تم رفع الترجمة ({len(documents)} ملف)')
+    if addressed:
+        messages.info(request, f'تمت معالجة {addressed} ملاحظة مراجعة')
+    return _redirect_back(request, fallback)
+
+
+def _document_response(request, pk, doc_pk, *, inline):
+    order = get_object_or_404(WorkOrder, pk=pk)
+    if not _can_access_documents(request.user, _get_profile(request.user), order):
+        return HttpResponseForbidden('غير مسموح')
+    document = get_object_or_404(
+        OrderDocument, pk=doc_pk, work_order=order, purged_at__isnull=True,
+    )
+    if inline and not document.is_previewable:
+        raise Http404('لا تتوفر معاينة لهذا النوع من الملفات')
+
+    storage, name = document.file.storage, document.file.name
+    disposition = content_disposition_header(not inline, document.original_name)
+    if _uses_presigned_urls(storage):
+        response = HttpResponseRedirect(storage.url(name, parameters={
+            'ResponseContentDisposition': disposition,
+            'ResponseContentType': document.content_type,
+        }, expire=60))
+        response['X-Content-Type-Options'] = 'nosniff'
+        return response
+    return _private_file_response(
+        storage.path(name), f'/internal-documents/{name}', document.content_type, disposition,
+    )
+
+
+@login_required
+def document_download(request, pk, doc_pk):
+    return _document_response(request, pk, doc_pk, inline=False)
+
+
+@login_required
+def document_preview(request, pk, doc_pk):
+    """Open a PDF or image in the browser."""
+    return _document_response(request, pk, doc_pk, inline=True)
+
+
+@login_required
+@require_POST
+def document_delete(request, pk, doc_pk):
+    order = get_object_or_404(WorkOrder, pk=pk)
+    document = get_object_or_404(OrderDocument, pk=doc_pk, work_order=order)
+    if not _can_delete_document(request.user, order, document):
+        return HttpResponseForbidden('غير مسموح')
+
+    anchor = f'line-{document.language_line_id}' if document.language_line_id else 'documents'
+    storage, name = document.file.storage, document.file.name
+    document.delete()
+    storage.delete(name)
+    messages.success(request, 'تم حذف الملف')
+    return _redirect_back(request, _documents_url(order, anchor))
+
+
+@login_required
+@require_POST
+def document_note_add(request, pk, ll_pk):
+    """Raise a revision note on a language line's translation."""
+    order = get_object_or_404(WorkOrder, pk=pk)
+    language_line = get_object_or_404(WorkOrderLanguage, pk=ll_pk, work_order=order)
+    if not _can_supply_and_review_documents(request.user, _get_profile(request.user), order):
+        return HttpResponseForbidden('غير مسموح')
+
+    fallback = _documents_url(order, f'line-{language_line.pk}')
+    form = DocumentNoteForm(request.POST, language_line=language_line)
+    if not form.is_valid():
+        _flash_form_errors(request, form)
+        return _redirect_back(request, fallback)
+
+    note = DocumentNote.objects.create(
+        work_order=order, language_line=language_line,
+        document=form.cleaned_data['document'], author=request.user,
+        body=form.cleaned_data['body'],
+    )
+    notify_revision_requested(note)
+    messages.success(request, 'تم إرسال الملاحظة إلى المترجم')
+    return _redirect_back(request, fallback)

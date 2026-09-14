@@ -144,6 +144,10 @@
             </div>
         </div>
 
+        {% if can_access_documents %}
+        {% include "orders/_documents_card.html" %}
+        {% endif %}
+
         {% if order.notes %}
         <div class="card card-accent mb-4">
             <div class="card-header card-header-navy">

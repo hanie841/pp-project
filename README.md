@@ -21,10 +21,11 @@ The portal is run by **SmartWorld for Language & Technology** under contract
 | Core work-order workflow     | ✅ Done — end-to-end script passes (99/99 checks) |
 | Translator assignment        | ✅ Done — partial test coverage |
 | PDF export & e-mail          | ✅ Done |
+| Document upload pipeline     | ✅ Built — files to translate, translations, revision notes; **not deployed yet** |
 | Video conferencing           | ✅ Built — needs a LiveKit server; not covered by tests |
 | Recording & live captions    | ✅ Built — needs LiveKit Egress / OpenAI; not covered by tests |
 | Access control               | ✅ Hardened — per-order read access, scoped approval, POST-only actions |
-| Automated test suite         | ⚠️ 15 regression tests + the workflow script; conference flows untested |
+| Automated test suite         | ⚠️ 39 regression tests + the workflow script; conference flows untested |
 | Production deployment        | ⚠️ Security settings ready (`check --deploy` clean); no server config yet |
 
 **Overall:** the portal is a working MVP with every feature in place and the
@@ -91,6 +92,41 @@ DRAFT → SUBMITTED → ACCEPTED → ASSIGNED → PENDING_APPROVAL → COMPLETED
   accepted, meeting link, actuals logged, approved (certificate PDF attached),
   disputed, and translator assigned/accepted/declined/all completed.
   `info@swlt.ae` is always copied.
+
+### Work-order files
+
+Documents travel through the portal instead of e-mail. E-mails only carry a
+link to the order.
+
+- **Files to translate**: uploaded when the order is created, or later from
+  the order page, several at a time. PP staff (for their own or their
+  prosecution's orders), SmartWorld and the contract manager can upload them.
+- **Translations**: the assigned translator uploads the translation for their
+  language line, or SmartWorld / the CM uploads it.
+  - On written, review and AI-review orders, a translator must upload the
+    translation before logging service.
+  - Every version is kept, and the newest is marked "الأحدث".
+- **Revision notes**: when a translation has a problem, PP staff, SmartWorld
+  or the CM add a note on it.
+  - The translator is e-mailed and sees the note on their dashboard.
+  - Uploading a corrected version marks the line's notes as addressed.
+  - The order can't be approved while any note is open.
+- **Access**: files are private.
+  - They're stored outside `media/`, which nginx serves publicly, and are
+    downloaded only through a logged-in view: nginx `X-Accel-Redirect` in
+    production, or 60-second presigned URLs on S3.
+  - Translators only see files of orders they're assigned to.
+- **Preview**: PDFs and images open in the browser.
+- **Limits**: allowed file types, 25 MB per file and 500 MB per order by
+  default.
+- **Virus scanning** (optional): ClamAV, enabled with
+  `DOCUMENT_VIRUS_SCAN=required`. Uploads are refused while the scanner is
+  unreachable.
+- **Retention** (optional): `manage.py purge_documents` deletes the files of
+  completed orders after `DOCUMENT_RETENTION_DAYS`. It's a dry run unless
+  `--apply` is given, and the records are kept for audit.
+- **Storage**: a local private directory by default, or S3 with
+  `DOCUMENT_STORAGE=s3`.
 
 ### Video conferencing (LiveKit)
 
@@ -175,15 +211,9 @@ Each fix has a regression test in `core/tests.py`.
 - [ ] **No in-app management screens.** The workflow mode (MANUAL/AUTO),
       translator profiles and the rate card can only be managed in the Django
       admin.
-- [ ] **No translator demo account.** `seed_demo` doesn't create a translator
-      or a `TranslatorProfile`, so translator flows need manual setup.
 - [ ] **Hard-coded values that should come from settings or `.env`:**
-  - the conference URL `https://pp.swlt.ae` in `core/signals.py`
   - the contract value and number in `settings.py`
   - `COMPANY_EMAIL`
-- [ ] **`RECORDING_ROOT` has a suspicious default.** It points at
-      `/var/www/gfad-portal/...`, which looks like it came from another
-      project.
 - [ ] **Duplicated PDF code.** The rendering and logo embedding appear four
       times across `views.py` and `signals.py`. Extract one helper.
 - [ ] **Captions only work in Chromium browsers**, because Firefox doesn't
@@ -206,6 +236,22 @@ Each fix has a regression test in `core/tests.py`.
       `makemigrations --check`.
 
 ### Deployment & operations
+
+- [ ] **Deploy the document pipeline.** Before `git pull`,
+      `pip install -r requirements.txt`, `migrate` and the restart on the
+      server:
+  - Create `/var/www/pp-portal/private`, owned by `www-data`, mode 750.
+  - Set `PRIVATE_FILES_ROOT=/var/www/pp-portal/private` and
+    `SITE_URL=https://pp.swlt.ae` in `.env`.
+  - In nginx `sites-enabled/pp-portal` (a standalone copy, not a symlink):
+    - add `location /internal-documents/ { internal; alias /var/www/pp-portal/private/; }`
+    - add `client_max_body_size 100M;` — the 1 MB default rejects uploads
+    - run `nginx -t`, then reload
+  - Include the private directory in backups.
+  - Optional:
+    - ClamAV — needs about 1 GB of RAM on a server shared with other sites
+    - an S3 bucket
+    - a retention period
 
 - [ ] **Raise `SECURE_HSTS_SECONDS`** from the cautious 3600 default to
       31536000 once HTTPS is confirmed stable.
@@ -281,15 +327,18 @@ Then open <http://127.0.0.1:8000/>.
 | `pp_staff`      | `pp123`    | PP staff          |
 | `admin`         | `admin123` | SmartWorld admin (superuser) |
 | `contract_mgr`  | `cm123`    | Contract manager  |
+| `translator`    | `tr123`    | Translator (English, Urdu) |
 
-There is no translator demo account. To create one in the admin, add a user
-with a `TRANSLATOR` profile and give them a `TranslatorProfile` with
-languages. The Django admin is at `/admin/`.
+The Django admin is at `/admin/`.
 
 ## Tests
 
-The regression tests cover access control, numbering, certificates and
-service logging. They run under Django's test runner on a throwaway
+The regression tests cover:
+- access control, numbering, certificates and service logging
+- the document pipeline: uploads, downloads, revision notes, virus scanning
+  and retention
+
+ They run under Django's test runner on a throwaway
 in-memory database:
 
 ```powershell
@@ -332,6 +381,16 @@ Remove-Item Env:\DB_NAME
 | `RECORDING_ROOT` | `/var/www/gfad-portal/storage/app/recordings` | Where Egress writes recordings |
 | `OPENAI_API_KEY` | empty | Caption translation |
 | `GTK_BIN_DIR` | empty | GTK/Pango DLLs for WeasyPrint (Windows) |
+| `SITE_URL` | `http://127.0.0.1:8000` | Base address for links in e-mails |
+| `DOCUMENT_STORAGE` | `local` | `local` (private directory) or `s3` |
+| `PRIVATE_FILES_ROOT` | `private/` in the project | Where local document files are stored — never under `media/` |
+| `DOCUMENT_MAX_UPLOAD_SIZE` | 25 MB | Per-file limit, in bytes |
+| `DOCUMENT_MAX_ORDER_TOTAL_SIZE` | 500 MB | Per-order quota, in bytes |
+| `DOCUMENT_ALLOWED_EXTENSIONS` | pdf, doc(x), xls(x), ppt(x), rtf, txt, jpg, jpeg, png, tif(f) | Accepted file types |
+| `DOCUMENT_VIRUS_SCAN` | `off` | `required` scans uploads with ClamAV and refuses them while it's down |
+| `CLAMD_ADDRESS` | `unix:///var/run/clamav/clamd.ctl` | ClamAV daemon address (`unix://` or `tcp://`) |
+| `DOCUMENT_RETENTION_DAYS` | empty (keep forever) | Days after approval before `purge_documents` may delete files |
+| `AWS_STORAGE_BUCKET_NAME`, `AWS_S3_REGION_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | empty | S3 settings when `DOCUMENT_STORAGE=s3` |
 
 ## Optional services
 
@@ -347,14 +406,16 @@ Both are inert until configured. The rest of the app works without them.
 ```
 pp_portal/            Django project (settings, urls, wsgi/asgi)
 core/
-  models.py           Work orders, languages, assignments, approvals, certificates, recordings
+  models.py           Work orders, languages, assignments, approvals, certificates, recordings, documents, review notes
   views.py            All views: orders, approvals, PDFs, translators, conference, recording, captions
   forms.py            Order/language formsets, assignment & service forms
   signals.py          E-mail notifications (+ PDF attachments)
   livekit_utils.py    LiveKit room, token and Egress API helpers
+  storage.py          Private document storage (local directory or S3)
+  antivirus.py        ClamAV client for scanning uploads
   admin.py            Django admin configuration
   fixtures/           initial_data.json — prosecutions and language rate card
-  management/         seed_demo command
+  management/         seed_demo and purge_documents commands
   templatetags/       Arabic number/currency filters
 templates/            Dashboard, order pages, conference room, PDF templates
 static/               CSS, JS, logos
@@ -365,4 +426,5 @@ run.ps1               Windows dev-server launcher
 ## Tech stack
 
 Django 5, WeasyPrint, django-htmx, Bootstrap 5 (RTL), LiveKit (JS SDK +
-Twirp API), OpenAI, SQLite/PostgreSQL, gunicorn.
+Twirp API), OpenAI, SQLite/PostgreSQL, gunicorn, django-storages (S3,
+optional), ClamAV (optional).
