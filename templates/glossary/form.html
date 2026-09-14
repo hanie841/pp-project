@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_new %}{% if is_glossary_manager %}إضافة مصطلح{% else %}اقتراح مصطلح{% endif %}{% else %}تعديل مصطلح{% endif %} — المسرد القانوني{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="page-header">
+            <h3>
+                <i class="bi bi-journal-plus"></i>
+                {% if is_new %}{% if is_glossary_manager %}إضافة مصطلح{% else %}اقتراح مصطلح جديد{% endif %}{% else %}تعديل: {{ term.term_ar }}{% endif %}
+            </h3>
+            <a href="{% if term %}{% url 'glossary:term_detail' term.pk %}{% else %}{% url 'glossary:list' %}{% endif %}" class="btn btn-outline-gold btn-sm">
+                <i class="bi bi-arrow-right"></i> العودة
+            </a>
+        </div>
+
+        {% if is_new and not is_glossary_manager %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            سيُرسل المصطلح إلى مديري المسرد للمراجعة، ولن يُستخدم في البحث أو الترجمة الآلية قبل اعتماده.
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">{% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}</div>
+            {% endif %}
+
+            <div class="card card-accent mb-4">
+                <div class="card-header card-header-navy"><i class="bi bi-translate"></i> المصطلح</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">{% include "glossary/_field.html" with field=form.term_ar %}</div>
+                        <div class="col-md-6">{% include "glossary/_field.html" with field=form.term_en %}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">{% include "glossary/_field.html" with field=form.domain %}</div>
+                        <div class="col-md-6">{% include "glossary/_field.html" with field=form.part_of_speech %}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-accent mb-4">
+                <div class="card-header card-header-navy"><i class="bi bi-book"></i> التعريف والأمثلة</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">{% include "glossary/_field.html" with field=form.definition_ar %}</div>
+                        <div class="col-md-6">{% include "glossary/_field.html" with field=form.definition_en %}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">{% include "glossary/_field.html" with field=form.example_ar %}</div>
+                        <div class="col-md-6">{% include "glossary/_field.html" with field=form.example_en %}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-accent mb-4">
+                <div class="card-header card-header-navy"><i class="bi bi-arrow-left-right"></i> المرادفات والصيغ غير المقبولة</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">{% include "glossary/_field.html" with field=form.synonyms_ar %}</div>
+                        <div class="col-md-6">{% include "glossary/_field.html" with field=form.synonyms_en %}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">{% include "glossary/_field.html" with field=form.forbidden_ar %}</div>
+                        <div class="col-md-6">{% include "glossary/_field.html" with field=form.forbidden_en %}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-accent mb-4">
+                <div class="card-header card-header-navy"><i class="bi bi-bookmark"></i> المرجع والملاحظات</div>
+                <div class="card-body">
+                    {% include "glossary/_field.html" with field=form.source_reference %}
+                    {% include "glossary/_field.html" with field=form.notes %}
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-navy btn-lg">
+                <i class="bi bi-check-circle"></i>
+                {% if is_new and not is_glossary_manager %}إرسال للمراجعة{% else %}حفظ{% endif %}
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

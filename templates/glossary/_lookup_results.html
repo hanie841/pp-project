@@ -1,0 +1,41 @@
+{% if query %}
+{% if terms %}
+<div class="list-group">
+    {% for term in terms %}
+    <div class="list-group-item">
+        <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+            <div>
+                <a href="{% url 'glossary:term_detail' term.pk %}" target="_blank" rel="noopener" class="fw-bold" style="color: var(--navy);">{{ term.term_ar }}</a>
+                <span class="mx-1 text-muted">↔</span>
+                <span dir="ltr">{{ term.term_en }}</span>
+                {% if term.domain %}<br><small class="text-muted">{{ term.domain.name_ar }}</small>{% endif %}
+                {% if term.forbidden_ar_list or term.forbidden_en_list %}
+                <br><small class="text-danger">
+                    <i class="bi bi-exclamation-triangle"></i> تجنّب:
+                    {{ term.forbidden_ar_list|join:"، " }}{% if term.forbidden_ar_list and term.forbidden_en_list %} / {% endif %}<span dir="ltr">{{ term.forbidden_en_list|join:", " }}</span>
+                </small>
+                {% endif %}
+            </div>
+            {% if can_link %}
+            {% if term.pk in linked_ids %}
+            <span class="badge bg-success">مضاف لهذا الأمر</span>
+            {% else %}
+            <form method="post" action="{% url 'glossary:order_term_add' order.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="term" value="{{ term.pk }}">
+                <input type="hidden" name="next" value="{{ return_url }}">
+                <button type="submit" class="btn btn-sm btn-outline-gold"><i class="bi bi-plus"></i> إضافة إلى هذا الأمر</button>
+            </form>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-muted small">
+    لا توجد نتائج معتمدة.
+    <a href="{% url 'glossary:term_create' %}?q={{ query|urlencode }}" target="_blank" rel="noopener">اقتراح مصطلح جديد</a>
+</div>
+{% endif %}
+{% endif %}

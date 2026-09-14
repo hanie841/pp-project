@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}معاينة الاستيراد — المسرد القانوني{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-11">
+        <div class="page-header">
+            <h3><i class="bi bi-eye"></i> معاينة الاستيراد <small class="text-muted fs-6" dir="ltr">{{ pending.filename }}</small></h3>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap mb-2">
+            <span class="badge bg-secondary fs-6">إجمالي الصفوف: {{ summary.total }}</span>
+            <span class="badge bg-success fs-6">جديد: {{ summary.new }}</span>
+            <span class="badge bg-info text-dark fs-6">
+                موجود مسبقاً ({% if pending.on_duplicate == 'update' %}سيُحدَّث{% else %}سيُتجاهل{% endif %}): {{ summary.duplicates }}
+            </span>
+            <span class="badge bg-danger fs-6">صفوف بها أخطاء (لن تُستورد): {{ summary.errors }}</span>
+        </div>
+        <p class="text-muted">
+            المصطلحات الجديدة ستُضاف {% if pending.import_as == 'APPROVED' %}معتمدة مباشرة{% else %}كمقترحات بانتظار المراجعة{% endif %}.
+        </p>
+
+        <div class="card card-accent mb-3">
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 60vh;">
+                    <table class="table table-sm table-gov mb-0">
+                        <thead>
+                            <tr><th>الصف</th><th>المصطلح بالعربية</th><th>English term</th><th>المجال</th><th>النتيجة</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in entries %}
+                            <tr{% if entry.errors %} class="table-danger"{% elif entry.duplicate_of %} class="table-info"{% endif %}>
+                                <td>{{ entry.line }}</td>
+                                <td dir="rtl">{{ entry.data.term_ar }}</td>
+                                <td dir="ltr" class="text-start">{{ entry.data.term_en }}</td>
+                                <td>{{ entry.data.domain|default:"-" }}</td>
+                                <td class="small">
+                                    {% if entry.errors %}
+                                    {% for error in entry.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                                    {% elif entry.duplicate_of %}
+                                    مكرر — {% if pending.on_duplicate == 'update' %}سيتم التحديث{% else %}سيتم التجاهل{% endif %}
+                                    {% else %}
+                                    <span class="text-success">جديد</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% if hidden_count %}<p class="text-muted small">و{{ hidden_count }} صفاً آخر غير معروض في المعاينة.</p>{% endif %}
+
+        <form method="post" class="d-flex gap-2">
+            {% csrf_token %}
+            <button type="submit" name="action" value="confirm" class="btn btn-success btn-lg">
+                <i class="bi bi-check-circle"></i> تأكيد الاستيراد
+            </button>
+            <button type="submit" name="action" value="cancel" class="btn btn-outline-secondary btn-lg">إلغاء</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

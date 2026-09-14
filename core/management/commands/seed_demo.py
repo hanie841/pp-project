@@ -6,6 +6,8 @@ Creates the accounts the local workflow test and manual QA expect:
     contract_mgr / cm123      -> CONTRACT_MANAGER
     translator / tr123        -> TRANSLATOR (English and Urdu)
 
+Also adds a few [DEMO] glossary terms and one pending proposal.
+
 Idempotent: safe to re-run. Refuses to run when DEBUG is off, since the
 passwords are well known.
 """
@@ -15,6 +17,8 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 
 from core.models import Language, Prosecution, Prosecutor, TranslatorProfile, UserProfile
+from glossary.models import GlossaryTerm, LegalDomain
+from glossary.normalization import normalize
 
 DEMO_USERS = [
     # username, password, first, last, role, is_superuser, link_prosecution
@@ -88,4 +92,29 @@ class Command(BaseCommand):
             Language.objects.filter(name_en__in=['English', 'Urdu'])
         )
 
+        self._seed_glossary()
+
         self.stdout.write(self.style.SUCCESS('Demo data seeded.'))
+
+    def _seed_glossary(self):
+        admin = User.objects.get(username='admin')
+        translator = User.objects.get(username='translator')
+        general = LegalDomain.objects.filter(name_en='General').first()
+        procedure = LegalDomain.objects.filter(name_en='Criminal Procedure').first()
+        samples = [
+            ('النيابة العامة', 'Public Prosecution', general, GlossaryTerm.Status.APPROVED, admin),
+            ('أمر القبض', 'arrest warrant', procedure, GlossaryTerm.Status.APPROVED, admin),
+            ('الحبس الاحتياطي', 'pretrial detention', procedure, GlossaryTerm.Status.APPROVED, admin),
+            ('محضر جمع الاستدلالات', 'evidence-gathering report', procedure,
+             GlossaryTerm.Status.PROPOSED, translator),
+        ]
+        for term_ar, term_en, domain, status, user in samples:
+            GlossaryTerm.objects.get_or_create(
+                term_ar_normalized=normalize(term_ar),
+                term_en_normalized=normalize(term_en),
+                defaults={
+                    'term_ar': term_ar, 'term_en': term_en, 'domain': domain,
+                    'status': status, 'proposed_by': user,
+                    'notes': '[DEMO] بيانات تجريبية للتطوير المحلي فقط',
+                },
+            )

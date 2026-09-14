@@ -7,3 +7,4 @@ openai>=1.30
 PyJWT>=2.8
 requests>=2.31
 django-storages[s3]>=1.14
+openpyxl>=3.1

@@ -148,6 +148,11 @@
         {% include "orders/_documents_card.html" %}
         {% endif %}
 
+        {% include "glossary/_order_terms.html" %}
+        {% if can_access_documents %}
+        {% include "glossary/_lookup_panel.html" %}
+        {% endif %}
+
         {% if order.notes %}
         <div class="card card-accent mb-4">
             <div class="card-header card-header-navy">

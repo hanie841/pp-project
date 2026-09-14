@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_htmx',
     'core',
+    'glossary',
 ]
 
 MIDDLEWARE = [
@@ -101,6 +102,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'glossary.context_processors.glossary_nav',
             ],
         },
     },
@@ -240,3 +242,6 @@ STORAGES = {
 
 # OpenAI API (used for caption translation)
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+
+# Add approved glossary terms that occur in a caption to its translation prompt
+GLOSSARY_IN_CAPTIONS = _env_bool('GLOSSARY_IN_CAPTIONS', True)

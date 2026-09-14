@@ -21,11 +21,12 @@ The portal is run by **SmartWorld for Language & Technology** under contract
 | Core work-order workflow     | ✅ Done — end-to-end script passes (99/99 checks) |
 | Translator assignment        | ✅ Done — partial test coverage |
 | PDF export & e-mail          | ✅ Done |
-| Document upload pipeline     | ✅ Built — files to translate, translations, revision notes; **not deployed yet** |
+| Document upload pipeline     | ✅ Live — files to translate, translations, revision notes |
+| Legal glossary               | ✅ Built — Arabic–English terms, review workflow, AI captions, order terms; **not deployed yet** |
 | Video conferencing           | ✅ Built — needs a LiveKit server; not covered by tests |
 | Recording & live captions    | ✅ Built — needs LiveKit Egress / OpenAI; not covered by tests |
 | Access control               | ✅ Hardened — per-order read access, scoped approval, POST-only actions |
-| Automated test suite         | ⚠️ 39 regression tests + the workflow script; conference flows untested |
+| Automated test suite         | ⚠️ 64 regression tests + the workflow script; conference flows untested |
 | Production deployment        | ⚠️ Security settings ready (`check --deploy` clean); no server config yet |
 
 **Overall:** the portal is a working MVP with every feature in place and the
@@ -127,6 +128,49 @@ link to the order.
   `--apply` is given, and the records are kept for audit.
 - **Storage**: a local private directory by default, or S3 with
   `DOCUMENT_STORAGE=s3`.
+
+### Legal glossary
+
+A bilingual Arabic–English legal terminology database at `/glossary/`.
+
+- **Terms**: the Arabic and English term, plus:
+  - legal domain and part of speech
+  - definitions and examples in both languages
+  - accepted synonyms
+  - forbidden variants, shown as warnings
+  - a legal reference and notes
+- **Search**: Arabic or English, ranked exact → starts with → contains.
+  - Arabic is normalized, so a term is found with or without diacritics or
+    tatweel and with any alef/hamza, ى/ي or ة/ه spelling.
+  - Filters: domain and part of speech.
+- **Review workflow**:
+  - SmartWorld admins and the contract manager add terms that are approved
+    immediately.
+  - Translators, PP staff and SmartWorld staff propose terms; managers
+    approve or reject them with a note.
+  - Managers see a badge with the number of waiting proposals.
+  - Proposers are e-mailed the decision.
+- **History**: every create, edit, review, archive and import is recorded
+  with who changed which field. Terms are archived, never deleted.
+- **Duplicates**: the same term pair can't be entered twice, even with
+  different spelling (enforced by a database constraint on the normalized
+  pair).
+- **Import / export**:
+  - Managers import CSV or Excel files from a downloadable template, with a
+    preview that flags row errors and existing terms (skip or update).
+  - Everyone can export the approved terms to Excel or CSV.
+- **AI captions**: approved terms that occur in a spoken caption are added to
+  the translation prompt, together with their forbidden variants, so live
+  captions use the official terminology. Only terms present in the caption
+  are sent. Switch off with `GLOSSARY_IN_CAPTIONS=false`.
+- **Lookup panel**: a live glossary search on the order, approve and
+  translator service-log pages.
+- **Terms per order**: staff and the assigned translators link terms to a
+  work order; they show as "مصطلحات هذا الأمر" on the order page.
+- **Legal domains**: ten categories are seeded (criminal law, criminal
+  procedure, civil, commercial, personal status, labour, administrative,
+  cybercrime, international cooperation, general) and are editable in the
+  Django admin. The glossary itself starts empty.
 
 ### Video conferencing (LiveKit)
 
@@ -237,21 +281,16 @@ Each fix has a regression test in `core/tests.py`.
 
 ### Deployment & operations
 
-- [ ] **Deploy the document pipeline.** Before `git pull`,
-      `pip install -r requirements.txt`, `migrate` and the restart on the
-      server:
-  - Create `/var/www/pp-portal/private`, owned by `www-data`, mode 750.
-  - Set `PRIVATE_FILES_ROOT=/var/www/pp-portal/private` and
-    `SITE_URL=https://pp.swlt.ae` in `.env`.
-  - In nginx `sites-enabled/pp-portal` (a standalone copy, not a symlink):
-    - add `location /internal-documents/ { internal; alias /var/www/pp-portal/private/; }`
-    - add `client_max_body_size 100M;` — the 1 MB default rejects uploads
-    - run `nginx -t`, then reload
-  - Include the private directory in backups.
-  - Optional:
-    - ClamAV — needs about 1 GB of RAM on a server shared with other sites
-    - an S3 bucket
-    - a retention period
+- [ ] **Deploy the legal glossary:** `git pull`,
+      `pip install -r requirements.txt` (adds openpyxl), `migrate` (creates
+      the tables and seeds the legal domains), `collectstatic`, then restart.
+      No nginx or `.env` changes are needed.
+- [ ] **Back up `/var/www/pp-portal/private`**, where uploaded documents are
+      stored.
+- [ ] **Optional document features:**
+  - ClamAV — needs about 1 GB of RAM on a server shared with other sites
+  - an S3 bucket
+  - a retention period
 
 - [ ] **Raise `SECURE_HSTS_SECONDS`** from the cautious 3600 default to
       31536000 once HTTPS is confirmed stable.
@@ -329,7 +368,8 @@ Then open <http://127.0.0.1:8000/>.
 | `contract_mgr`  | `cm123`    | Contract manager  |
 | `translator`    | `tr123`    | Translator (English, Urdu) |
 
-The Django admin is at `/admin/`.
+`seed_demo` also adds a few glossary terms marked `[DEMO]` and one pending
+proposal. The Django admin is at `/admin/`.
 
 ## Tests
 
@@ -337,12 +377,14 @@ The regression tests cover:
 - access control, numbering, certificates and service logging
 - the document pipeline: uploads, downloads, revision notes, virus scanning
   and retention
+- the legal glossary: Arabic normalization, search and matching, the review
+  workflow, import/export, AI caption prompts and order terms
 
  They run under Django's test runner on a throwaway
 in-memory database:
 
 ```powershell
-.\.venv\Scripts\python.exe manage.py test core
+.\.venv\Scripts\python.exe manage.py test core glossary
 ```
 
 `test_workflow.py` is an end-to-end script covering the core order lifecycle:
@@ -391,6 +433,7 @@ Remove-Item Env:\DB_NAME
 | `CLAMD_ADDRESS` | `unix:///var/run/clamav/clamd.ctl` | ClamAV daemon address (`unix://` or `tcp://`) |
 | `DOCUMENT_RETENTION_DAYS` | empty (keep forever) | Days after approval before `purge_documents` may delete files |
 | `AWS_STORAGE_BUCKET_NAME`, `AWS_S3_REGION_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | empty | S3 settings when `DOCUMENT_STORAGE=s3` |
+| `GLOSSARY_IN_CAPTIONS` | `True` | Add approved glossary terms found in a caption to the AI translation prompt |
 
 ## Optional services
 
@@ -417,7 +460,13 @@ core/
   fixtures/           initial_data.json — prosecutions and language rate card
   management/         seed_demo and purge_documents commands
   templatetags/       Arabic number/currency filters
-templates/            Dashboard, order pages, conference room, PDF templates
+glossary/             Legal glossary app
+  models.py           Terms, legal domains, change history, terms linked to orders
+  normalization.py    Arabic/English normalization used by search and matching
+  matching.py         Finds approved terms inside a text (AI captions)
+  search.py           Ranked glossary search
+  importers.py        CSV/XLSX import and export
+templates/            Dashboard, order pages, conference room, glossary, PDF templates
 static/               CSS, JS, logos
 test_workflow.py      End-to-end workflow test script
 run.ps1               Windows dev-server launcher
@@ -427,4 +476,4 @@ run.ps1               Windows dev-server launcher
 
 Django 5, WeasyPrint, django-htmx, Bootstrap 5 (RTL), LiveKit (JS SDK +
 Twirp API), OpenAI, SQLite/PostgreSQL, gunicorn, django-storages (S3,
-optional), ClamAV (optional).
+optional), ClamAV (optional), openpyxl (Excel import/export).

@@ -1,0 +1,46 @@
+<div class="card card-accent mb-4" id="order-terms">
+    <div class="card-header card-header-navy"><i class="bi bi-bookmark-star"></i> مصطلحات هذا الأمر</div>
+    <div class="card-body{% if order_terms %} p-0{% endif %}">
+        {% if order_terms %}
+        <div class="table-responsive">
+            <table class="table table-hover table-gov mb-0">
+                <thead>
+                    <tr>
+                        <th>المصطلح بالعربية</th>
+                        <th>English term</th>
+                        <th>المجال</th>
+                        <th>أضافه</th>
+                        {% if can_link_terms %}<th></th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for link in order_terms %}
+                    <tr>
+                        <td dir="rtl">
+                            <a href="{% url 'glossary:term_detail' link.term.pk %}" style="color: var(--navy); font-weight: 600;">{{ link.term.term_ar }}</a>
+                            {% if link.note %}<br><small class="text-muted">{{ link.note }}</small>{% endif %}
+                        </td>
+                        <td dir="ltr" class="text-start">{{ link.term.term_en }}</td>
+                        <td>{{ link.term.domain.name_ar|default:"-" }}</td>
+                        <td>{{ link.added_by.get_full_name|default:link.added_by.username|default:"-" }}</td>
+                        {% if can_link_terms %}
+                        <td>
+                            <form method="post" action="{% url 'glossary:order_term_remove' order.pk link.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}#order-terms">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="إزالة من الأمر"><i class="bi bi-x-lg"></i></button>
+                            </form>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-muted small">
+            لم تُربط مصطلحات بهذا الأمر بعد{% if can_link_terms %} — استخدم «البحث في المسرد القانوني» لإضافتها{% endif %}.
+        </div>
+        {% endif %}
+    </div>
+</div>

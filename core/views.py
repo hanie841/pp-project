@@ -42,6 +42,7 @@ from .livekit_utils import (
     create_room, generate_join_token, update_room_metadata,
     start_room_recording, stop_recording, list_egress,
 )
+from glossary.captions import glossary_prompt
 
 
 def login_view(request):
@@ -206,6 +207,17 @@ def _document_context(request, order, profile):
         'documents_limit': limit,
         'documents_used_percent': min(100, used * 100 // limit) if limit else 0,
         'allowed_extensions': _accept_attribute(),
+    }
+
+
+def _glossary_order_context(request, order):
+    """Context for the "مصطلحات هذا الأمر" card and the glossary lookup panel."""
+    from glossary.permissions import can_link_terms  # glossary.permissions imports this module
+    return {
+        'order_terms': order.glossary_terms.filter(term__is_archived=False).select_related(
+            'term', 'term__domain', 'added_by',
+        ),
+        'can_link_terms': can_link_terms(request.user, order),
     }
 
 
@@ -484,6 +496,7 @@ def order_detail(request, pk):
         'workflow_mode': config.mode,
         'recordings': recordings,
         **_document_context(request, order, profile),
+        **_glossary_order_context(request, order),
     })
 
 
@@ -666,6 +679,7 @@ def order_approve(request, pk):
         'dispute_form': dispute_form,
         'profile': profile,
         **_document_context(request, order, profile),
+        **_glossary_order_context(request, order),
     })
 
 
@@ -1452,6 +1466,12 @@ def captions_translate(request, pk):
 
     from openai import OpenAI
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    system_prompt = (
+        'You are a legal translation assistant for UAE Federal Prosecution. '
+        'Translate the following text accurately and concisely. '
+        'Preserve legal terminology. Return ONLY the translated text, '
+        'no explanations or notes.'
+    ) + glossary_prompt(text, source_lang, target_lang)
 
     try:
         resp = client.chat.completions.create(
@@ -1461,12 +1481,7 @@ def captions_translate(request, pk):
             messages=[
                 {
                     'role': 'system',
-                    'content': (
-                        'You are a legal translation assistant for UAE Federal Prosecution. '
-                        'Translate the following text accurately and concisely. '
-                        'Preserve legal terminology. Return ONLY the translated text, '
-                        'no explanations or notes.'
-                    ),
+                    'content': system_prompt,
                 },
                 {
                     'role': 'user',

@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}المسرد القانوني{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-11">
+        <div class="page-header">
+            <h3><i class="bi bi-journal-text"></i> المسرد القانوني <small class="text-muted fs-6">عربي – English</small></h3>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{% url 'glossary:term_create' %}" class="btn btn-navy btn-sm">
+                    <i class="bi bi-plus-circle"></i> {% if is_glossary_manager %}إضافة مصطلح{% else %}اقتراح مصطلح{% endif %}
+                </a>
+                {% if is_glossary_manager %}
+                <a href="{% url 'glossary:import' %}" class="btn btn-outline-gold btn-sm">
+                    <i class="bi bi-upload"></i> استيراد
+                </a>
+                {% endif %}
+                <a href="{% url 'glossary:export' fmt='xlsx' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-file-earmark-excel"></i> تصدير Excel
+                </a>
+                <a href="{% url 'glossary:export' fmt='csv' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-filetype-csv"></i> CSV
+                </a>
+            </div>
+        </div>
+
+        {% if tabs %}
+        <ul class="nav nav-tabs mb-3">
+            {% for key, label, count in tabs %}
+            <li class="nav-item">
+                <a class="nav-link {% if tab == key %}active{% endif %}" href="?tab={{ key }}">
+                    {{ label }}
+                    <span class="badge {% if key == 'proposed' and count %}bg-warning text-dark{% else %}bg-light text-dark{% endif %}">{{ count }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        <form method="get" class="card card-accent mb-4">
+            <div class="card-body row g-2 align-items-end">
+                <input type="hidden" name="tab" value="{{ tab }}">
+                <div class="col-md-5">
+                    <label class="form-label" for="glossary-q">بحث بالعربية أو الإنجليزية</label>
+                    <input type="search" id="glossary-q" name="q" value="{{ query }}" class="form-control"
+                           placeholder="مثال: النيابة العامة / Public Prosecution" autofocus>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="glossary-domain">المجال القانوني</label>
+                    <select id="glossary-domain" name="domain" class="form-select">
+                        <option value="">كل المجالات</option>
+                        {% for domain in domains %}
+                        <option value="{{ domain.pk }}" {% if selected_domain == domain.pk|stringformat:"s" %}selected{% endif %}>{{ domain.name_ar }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="glossary-pos">نوع الكلمة</label>
+                    <select id="glossary-pos" name="pos" class="form-select">
+                        <option value="">الكل</option>
+                        {% for value, label in parts_of_speech %}
+                        <option value="{{ value }}" {% if selected_pos == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-navy w-100"><i class="bi bi-search"></i> بحث</button>
+                </div>
+            </div>
+        </form>
+
+        <div class="card card-accent">
+            <div class="card-body p-0">
+                {% if page.object_list %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-gov mb-0">
+                        <thead>
+                            <tr>
+                                <th>المصطلح بالعربية</th>
+                                <th>English term</th>
+                                <th>المجال</th>
+                                {% if is_glossary_manager %}<th>الحالة</th>{% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for term in page.object_list %}
+                            <tr>
+                                <td dir="rtl">
+                                    <a href="{% url 'glossary:term_detail' term.pk %}" style="color: var(--navy); font-weight: 600;">{{ term.term_ar }}</a>
+                                    {% if term.part_of_speech %}<small class="text-muted">({{ term.get_part_of_speech_display }})</small>{% endif %}
+                                </td>
+                                <td dir="ltr" class="text-start">{{ term.term_en }}</td>
+                                <td>{{ term.domain.name_ar|default:"-" }}</td>
+                                {% if is_glossary_manager %}<td>{% include "glossary/_status_badge.html" %}</td>{% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state py-4">
+                    <i class="bi bi-journal-x"></i>
+                    {% if query %}
+                    لا توجد نتائج لـ «{{ query }}» —
+                    <a href="{% url 'glossary:term_create' %}?q={{ query|urlencode }}">اقتراح مصطلح جديد</a>
+                    {% else %}
+                    لا توجد مصطلحات بعد
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if page.has_other_pages %}
+        <nav class="mt-3">
+            <ul class="pagination justify-content-center">
+                {% if page.has_previous %}
+                <li class="page-item"><a class="page-link" href="?{{ querystring }}&page={{ page.previous_page_number }}">السابق</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">{{ page.number }} / {{ page.paginator.num_pages }}</span></li>
+                {% if page.has_next %}
+                <li class="page-item"><a class="page-link" href="?{{ querystring }}&page={{ page.next_page_number }}">التالي</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% if my_proposals %}
+        <div class="card card-accent mt-4">
+            <div class="card-header card-header-gold"><i class="bi bi-hourglass-split"></i> مقترحاتي</div>
+            <div class="list-group list-group-flush">
+                {% for term in my_proposals %}
+                <a href="{% url 'glossary:term_detail' term.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <span>{{ term.term_ar }} — <span dir="ltr">{{ term.term_en }}</span></span>
+                    {% include "glossary/_status_badge.html" %}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

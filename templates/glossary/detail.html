@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}{{ term.term_ar }} — المسرد القانوني{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="page-header">
+            <h3><i class="bi bi-journal-text"></i> {{ term.term_ar }} <span class="text-muted" dir="ltr">— {{ term.term_en }}</span></h3>
+            <div class="d-flex gap-2">
+                {% if can_edit %}
+                <a href="{% url 'glossary:term_edit' term.pk %}" class="btn btn-navy btn-sm"><i class="bi bi-pencil-square"></i> تعديل</a>
+                {% endif %}
+                <a href="{% url 'glossary:list' %}" class="btn btn-outline-gold btn-sm"><i class="bi bi-arrow-right"></i> المسرد</a>
+            </div>
+        </div>
+
+        <div class="mb-3 d-flex gap-2 flex-wrap">
+            {% include "glossary/_status_badge.html" %}
+            {% if term.domain %}<span class="badge bg-light text-dark">{{ term.domain.name_ar }} / {{ term.domain.name_en }}</span>{% endif %}
+            {% if term.part_of_speech %}<span class="badge bg-light text-dark">{{ term.get_part_of_speech_display }}</span>{% endif %}
+        </div>
+
+        {% if term.status == 'REJECTED' and term.review_note %}
+        <div class="alert alert-danger"><strong>سبب الرفض:</strong> {{ term.review_note }}</div>
+        {% elif term.status == 'PROPOSED' %}
+        <div class="alert alert-warning">
+            <i class="bi bi-hourglass-split"></i>
+            هذا المصطلح مقترح وبانتظار مراجعة مديري المسرد، ولا يظهر في البحث أو الترجمة الآلية حتى يُعتمد.
+        </div>
+        {% endif %}
+
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card card-accent h-100">
+                    <div class="card-header card-header-navy">العربية</div>
+                    <div class="card-body" dir="rtl">
+                        <h4 class="mb-3">{{ term.term_ar }}</h4>
+                        {% if term.definition_ar %}
+                        <h6 class="section-title">التعريف</h6>
+                        <p style="white-space: pre-line;">{{ term.definition_ar }}</p>
+                        {% endif %}
+                        {% if term.example_ar %}
+                        <h6 class="section-title">مثال</h6>
+                        <p class="fst-italic" style="white-space: pre-line;">{{ term.example_ar }}</p>
+                        {% endif %}
+                        {% if term.synonyms_ar_list %}
+                        <h6 class="section-title">مرادفات مقبولة</h6>
+                        <ul>{% for variant in term.synonyms_ar_list %}<li>{{ variant }}</li>{% endfor %}</ul>
+                        {% endif %}
+                        {% if term.forbidden_ar_list %}
+                        <div class="alert alert-warning py-2 mb-0"><strong>صيغ غير مقبولة:</strong> {{ term.forbidden_ar_list|join:"، " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card card-accent h-100">
+                    <div class="card-header card-header-navy text-start" dir="ltr">English</div>
+                    <div class="card-body text-start" dir="ltr">
+                        <h4 class="mb-3">{{ term.term_en }}</h4>
+                        {% if term.definition_en %}
+                        <h6 class="section-title">Definition</h6>
+                        <p style="white-space: pre-line;">{{ term.definition_en }}</p>
+                        {% endif %}
+                        {% if term.example_en %}
+                        <h6 class="section-title">Example</h6>
+                        <p class="fst-italic" style="white-space: pre-line;">{{ term.example_en }}</p>
+                        {% endif %}
+                        {% if term.synonyms_en_list %}
+                        <h6 class="section-title">Accepted synonyms</h6>
+                        <ul>{% for variant in term.synonyms_en_list %}<li>{{ variant }}</li>{% endfor %}</ul>
+                        {% endif %}
+                        {% if term.forbidden_en_list %}
+                        <div class="alert alert-warning py-2 mb-0"><strong>Do not use:</strong> {{ term.forbidden_en_list|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-accent mb-4">
+            <div class="card-body">
+                <table class="table table-borderless table-sm mb-0">
+                    {% if term.source_reference %}
+                    <tr><th style="color: var(--gold-dark); width: 25%;">المرجع القانوني:</th><td>{{ term.source_reference }}</td></tr>
+                    {% endif %}
+                    {% if term.notes %}
+                    <tr><th style="color: var(--gold-dark);">ملاحظات:</th><td style="white-space: pre-line;">{{ term.notes }}</td></tr>
+                    {% endif %}
+                    <tr>
+                        <th style="color: var(--gold-dark); width: 25%;">اقترحه:</th>
+                        <td>{{ term.proposed_by.get_full_name|default:term.proposed_by.username|default:"-" }} — {{ term.created_at|date:"Y/m/d H:i" }}</td>
+                    </tr>
+                    {% if term.reviewed_at %}
+                    <tr>
+                        <th style="color: var(--gold-dark);">راجعه:</th>
+                        <td>{{ term.reviewed_by.get_full_name|default:term.reviewed_by.username|default:"-" }} — {{ term.reviewed_at|date:"Y/m/d H:i" }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+
+        {% if is_glossary_manager %}
+        <div class="card card-accent mb-4">
+            <div class="card-header card-header-gold"><i class="bi bi-clipboard-check"></i> المراجعة</div>
+            <div class="card-body">
+                <form method="post" action="{% url 'glossary:term_review' term.pk %}" class="mb-3">
+                    {% csrf_token %}
+                    <label class="form-label" for="review-note">ملاحظة المراجعة (مطلوبة عند الرفض)</label>
+                    <textarea id="review-note" name="note" rows="2" maxlength="2000" class="form-control mb-2">{{ term.review_note }}</textarea>
+                    <div class="d-flex gap-2">
+                        {% if term.status != 'APPROVED' %}
+                        <button type="submit" name="decision" value="approve" class="btn btn-success"><i class="bi bi-check-lg"></i> اعتماد</button>
+                        {% endif %}
+                        {% if term.status != 'REJECTED' %}
+                        <button type="submit" name="decision" value="reject" class="btn btn-outline-danger"><i class="bi bi-x-lg"></i> رفض</button>
+                        {% endif %}
+                    </div>
+                </form>
+                <form method="post" action="{% url 'glossary:term_archive' term.pk %}">
+                    {% csrf_token %}
+                    {% if term.is_archived %}
+                    <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-counterclockwise"></i> استعادة من الأرشيف</button>
+                    {% else %}
+                    <button type="submit" class="btn btn-outline-secondary btn-sm" onclick="return confirm('أرشفة المصطلح؟ لن يظهر في البحث أو الترجمة الآلية.');">
+                        <i class="bi bi-archive"></i> أرشفة
+                    </button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if orders %}
+        <div class="card card-accent mb-4">
+            <div class="card-header card-header-navy"><i class="bi bi-file-earmark-text"></i> أوامر التكليف المرتبطة</div>
+            <div class="list-group list-group-flush">
+                {% for order in orders %}
+                <a href="{% url 'order_detail' order.pk %}#order-terms" class="list-group-item list-group-item-action">
+                    {{ order.order_number }} — {{ order.prosecution.name }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if history_rows %}
+        <div class="card card-accent mb-4">
+            <div class="card-header card-header-navy"><i class="bi bi-clock-history"></i> سجل التغييرات</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-gov mb-0">
+                        <thead>
+                            <tr><th>التاريخ</th><th>بواسطة</th><th>الإجراء</th><th>التفاصيل</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for entry, changes in history_rows %}
+                            <tr>
+                                <td class="text-nowrap">{{ entry.changed_at|date:"Y/m/d H:i" }}</td>
+                                <td>{{ entry.changed_by.get_full_name|default:entry.changed_by.username|default:"-" }}</td>
+                                <td>{{ entry.get_action_display }}</td>
+                                <td class="small">
+                                    {% for label, old, new in changes %}
+                                    <div>
+                                        <strong>{{ label }}:</strong>
+                                        <span class="text-muted text-decoration-line-through">{{ old|default:"—" }}</span> ← {{ new|default:"—" }}
+                                    </div>
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

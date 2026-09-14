@@ -1,0 +1,1 @@
+{% if term.is_archived %}<span class="badge bg-secondary">مؤرشف</span>{% elif term.status == 'APPROVED' %}<span class="badge bg-success">معتمد</span>{% elif term.status == 'PROPOSED' %}<span class="badge" style="background: #F9A825; color: #333;">بانتظار المراجعة</span>{% else %}<span class="badge bg-danger">مرفوض</span>{% endif %}

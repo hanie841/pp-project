@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}استيراد مصطلحات — المسرد القانوني{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <div class="page-header">
+            <h3><i class="bi bi-upload"></i> استيراد مصطلحات</h3>
+            <a href="{% url 'glossary:list' %}" class="btn btn-outline-gold btn-sm"><i class="bi bi-arrow-right"></i> المسرد</a>
+        </div>
+
+        <div class="card card-accent mb-4">
+            <div class="card-header card-header-navy"><i class="bi bi-info-circle"></i> تجهيز الملف</div>
+            <div class="card-body">
+                <ul>
+                    <li>ملف Excel (‎.xlsx) أو CSV بترميز UTF-8، والصف الأول لعناوين الأعمدة.</li>
+                    <li>العمودان المطلوبان: <strong>المصطلح بالعربية</strong> و<strong>English term</strong>، وباقي الأعمدة اختيارية.</li>
+                    <li>في أعمدة المرادفات والصيغ غير المقبولة افصل بين الصيغ بعلامة <code>|</code>.</li>
+                    <li>يُكتب المجال ونوع الكلمة بالاسم العربي أو الإنجليزي كما هو في المسرد.</li>
+                    <li>ستظهر معاينة بالأخطاء والمكررات قبل حفظ أي مصطلح.</li>
+                </ul>
+                <a href="{% url 'glossary:import_template' fmt='xlsx' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-file-earmark-excel"></i> تحميل قالب Excel
+                </a>
+                <a href="{% url 'glossary:import_template' fmt='csv' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-filetype-csv"></i> تحميل قالب CSV
+                </a>
+                <details class="mt-3">
+                    <summary>الأعمدة المدعومة</summary>
+                    <table class="table table-sm mt-2 mb-0">
+                        <thead><tr><th>عنوان العمود</th><th>أو اسم الحقل</th></tr></thead>
+                        <tbody>
+                            {% for field, label in columns %}
+                            <tr><td>{{ label }}</td><td dir="ltr" class="text-start"><code>{{ field }}</code></td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </details>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="card card-accent">
+            <div class="card-body">
+                {% csrf_token %}
+                {% include "glossary/_field.html" with field=form.file %}
+                <div class="row">
+                    <div class="col-md-6">{% include "glossary/_field.html" with field=form.on_duplicate %}</div>
+                    <div class="col-md-6">{% include "glossary/_field.html" with field=form.import_as %}</div>
+                </div>
+                <button type="submit" class="btn btn-navy"><i class="bi bi-eye"></i> معاينة قبل الاستيراد</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

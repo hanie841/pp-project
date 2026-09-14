@@ -1,0 +1,15 @@
+<div class="card card-accent mb-4" id="glossary-lookup">
+    <div class="card-header card-header-gold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-journal-text"></i> البحث في المسرد القانوني</span>
+        <a href="{% url 'glossary:list' %}" target="_blank" rel="noopener" class="small text-reset">فتح المسرد</a>
+    </div>
+    <div class="card-body">
+        <input type="search" name="q" class="form-control" autocomplete="off"
+               placeholder="ابحث عن مصطلح بالعربية أو الإنجليزية…"
+               hx-get="{% url 'glossary:lookup' %}"
+               hx-trigger="input changed delay:300ms, search"
+               hx-target="#glossary-lookup-results"
+               {% if order %}hx-vals='{"order": "{{ order.pk }}"}'{% endif %}>
+        <div id="glossary-lookup-results" class="mt-2"></div>
+    </div>
+</div>
