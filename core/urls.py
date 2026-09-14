@@ -14,6 +14,7 @@ urlpatterns = [
     path('orders/<int:pk>/log/', views.order_log_service, name='order_log_service'),
     path('orders/<int:pk>/approve/', views.order_approve, name='order_approve'),
     path('orders/<int:pk>/certificate/', views.order_certificate, name='order_certificate'),
+    path('orders/<int:pk>/certificate/finalize/', views.certificate_finalize, name='certificate_finalize'),
     path('orders/<int:pk>/pdf/', views.order_pdf, name='order_pdf'),
     path('orders/<int:pk>/certificate/pdf/', views.certificate_pdf, name='certificate_pdf'),
     # Conference

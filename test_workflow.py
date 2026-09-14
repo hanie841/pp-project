@@ -342,9 +342,17 @@ def run_tests():
     print('\n--- STEP 11: Dashboard Contract Balance ---')
     # =============================================
 
-    # Finalize the certificate first
-    cert.status = CompletionCertificate.Status.FINALIZED
-    cert.save()
+    check('Draft certificate not counted as invoiced',
+          CompletionCertificate.total_invoiced() == Decimal('0'))
+
+    resp = pp_client.post(f'/orders/{order_pk}/certificate/finalize/')
+    check('PP Staff cannot finalize certificate', resp.status_code == 403)
+
+    resp = sw_client.post(f'/orders/{order_pk}/certificate/finalize/')
+    check('SmartWorld admin finalizes certificate', resp.status_code == 302)
+    cert.refresh_from_db()
+    check('Certificate status is FINALIZED',
+          cert.status == CompletionCertificate.Status.FINALIZED)
 
     resp = cm_client.get('/')
     check('Dashboard loads for Contract Manager', resp.status_code == 200)
@@ -459,6 +467,8 @@ def run_tests():
 
     cert2 = order2.certificate
     check('Second certificate auto-generated', cert2 is not None)
+    check('Same-day certificates get distinct invoice numbers',
+          cert2.invoice_number != cert.invoice_number)
     # Subtotal = 1080, VAT = 54, Grand total = 1134
     check(f'Second cert subtotal = 1080 (got {cert2.subtotal})',
           cert2.subtotal == Decimal('1080'))

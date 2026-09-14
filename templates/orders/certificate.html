@@ -7,8 +7,19 @@
 <div class="row justify-content-center">
     <div class="col-lg-10">
         <div class="page-header">
-            <h3><i class="bi bi-award-fill"></i> شهادة إنجاز</h3>
+            <h3>
+                <i class="bi bi-award-fill"></i> شهادة إنجاز
+                <span class="badge {% if certificate.status == 'FINALIZED' %}bg-success{% else %}bg-secondary{% endif %} fs-6 align-middle">{{ certificate.get_status_display }}</span>
+            </h3>
             <div class="d-flex gap-2">
+                {% if can_finalize and certificate.status == 'DRAFT' %}
+                <form method="post" action="{% url 'certificate_finalize' order.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check2-all"></i> اعتماد نهائي
+                    </button>
+                </form>
+                {% endif %}
                 <a href="{% url 'certificate_pdf' order.pk %}" class="btn btn-navy" target="_blank">
                     <i class="bi bi-file-pdf"></i> تصدير PDF
                 </a>

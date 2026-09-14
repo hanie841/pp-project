@@ -1,7 +1,25 @@
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.conf import settings
 from django.utils import timezone
 from decimal import Decimal
+
+NUMBER_SAVE_ATTEMPTS = 5
+
+
+def _save_with_generated_number(assign_number, save):
+    """Save a row whose unique number is generated as "last number + 1".
+
+    Two concurrent saves can generate the same number. The unique constraint
+    rejects the loser, so regenerate and retry inside a savepoint.
+    """
+    for attempt in range(NUMBER_SAVE_ATTEMPTS):
+        assign_number()
+        try:
+            with transaction.atomic():
+                return save()
+        except IntegrityError:
+            if attempt == NUMBER_SAVE_ATTEMPTS - 1:
+                raise
 
 
 class Prosecution(models.Model):
@@ -197,9 +215,15 @@ class WorkOrder(models.Model):
         return f'{self.order_number} - {self.prosecution.name}'
 
     def save(self, *args, **kwargs):
-        if not self.order_number:
+        if self.order_number:
+            return super().save(*args, **kwargs)
+
+        def assign_number():
             self.order_number = self._generate_order_number()
-        super().save(*args, **kwargs)
+
+        return _save_with_generated_number(
+            assign_number, lambda: super(WorkOrder, self).save(*args, **kwargs)
+        )
 
     def _generate_order_number(self):
         year = timezone.now().year
@@ -400,14 +424,24 @@ class CompletionCertificate(models.Model):
         return f'{self.certificate_number} - {self.work_order.order_number}'
 
     def save(self, *args, **kwargs):
-        if not self.certificate_number:
-            self.certificate_number = self._generate_certificate_number()
-        if not self.invoice_number:
-            self.invoice_number = self._generate_invoice_number()
-            self.invoice_date = timezone.now().date()
         self.vat_amount = self.subtotal * self.vat_rate / Decimal('100')
         self.grand_total = self.subtotal + self.vat_amount
-        super().save(*args, **kwargs)
+        if self.certificate_number:
+            if not self.invoice_number:
+                self._assign_invoice_number()
+            return super().save(*args, **kwargs)
+
+        generate_invoice = not self.invoice_number
+
+        def assign_numbers():
+            self.certificate_number = self._generate_certificate_number()
+            if generate_invoice:
+                self._assign_invoice_number()
+
+        return _save_with_generated_number(
+            assign_numbers,
+            lambda: super(CompletionCertificate, self).save(*args, **kwargs),
+        )
 
     def _generate_certificate_number(self):
         year = timezone.now().year
@@ -422,10 +456,13 @@ class CompletionCertificate(models.Model):
             new_num = 1
         return f'{prefix}{new_num:04d}'
 
-    def _generate_invoice_number(self):
+    def _assign_invoice_number(self):
+        # The certificate sequence keeps invoice numbers unique; the date
+        # alone was shared by every certificate issued on the same day.
         now = timezone.now()
-        date_part = now.strftime('%y%m%d')
-        return f'INV_PP_SWLT_{date_part}'
+        sequence = self.certificate_number.rsplit('/', 1)[-1]
+        self.invoice_number = f'INV_PP_SWLT_{now:%y%m%d}_{sequence}'
+        self.invoice_date = now.date()
 
     @classmethod
     def total_invoiced(cls):

@@ -4,7 +4,11 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.utils import timezone
+from django.utils.html import format_html_join
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
 from django.conf import settings
+from django.db import transaction
 from django.db.models import Sum, Q
 from decimal import Decimal
 
@@ -41,7 +45,12 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            next_url = request.GET.get('next', '/')
+            next_url = request.GET.get('next', '')
+            if not url_has_allowed_host_and_scheme(
+                next_url, allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            ):
+                next_url = '/'
             return redirect(next_url)
         else:
             messages.error(request, 'اسم المستخدم أو كلمة المرور غير صحيحة')
@@ -59,6 +68,40 @@ def _get_profile(user):
         return user.profile
     except UserProfile.DoesNotExist:
         return None
+
+
+def _visible_orders(user, profile):
+    """Work orders the user may read — the single source of read access."""
+    orders = WorkOrder.objects.all()
+    if user.is_superuser:
+        return orders
+    if profile is None:
+        return orders.none()
+    if profile.is_smartworld or profile.is_contract_manager:
+        return orders
+    if profile.is_pp_staff:
+        return orders.filter(
+            Q(created_by=user) | Q(prosecution=profile.prosecution)
+        )
+    if profile.is_translator:
+        visible = Q(assignments__translator=user)
+        # AUTO mode lists open lines in the translator's languages and links
+        # to their orders, so those must be readable too.
+        if WorkflowConfig.get_config().mode == WorkflowConfig.Mode.AUTO:
+            visible |= Q(
+                status__in=[WorkOrder.Status.ACCEPTED, WorkOrder.Status.ASSIGNED],
+                languages__language__translatorprofile__user=user,
+            )
+        return orders.filter(visible).distinct()
+    return orders.none()
+
+
+def _can_view_order(user, profile, order):
+    return _visible_orders(user, profile).filter(pk=order.pk).exists()
+
+
+def _can_finalize_certificate(user, profile):
+    return user.is_superuser or bool(profile and profile.is_smartworld_admin)
 
 
 @login_required
@@ -149,7 +192,7 @@ def dashboard(request):
         WorkOrder.Status.ASSIGNED, WorkOrder.Status.PENDING_APPROVAL,
         WorkOrder.Status.COMPLETED,
     ]
-    context['recent_activity'] = WorkOrder.objects.filter(
+    context['recent_activity'] = _visible_orders(request.user, profile).filter(
         status__in=recent_statuses
     ).order_by('-updated_at')[:10]
 
@@ -159,11 +202,7 @@ def dashboard(request):
 @login_required
 def order_list(request):
     profile = _get_profile(request.user)
-    orders = WorkOrder.objects.all()
-    if profile and profile.is_pp_staff:
-        orders = orders.filter(
-            Q(created_by=request.user) | Q(prosecution=profile.prosecution)
-        )
+    orders = _visible_orders(request.user, profile)
 
     status_filter = request.GET.get('status')
     if status_filter:
@@ -216,6 +255,8 @@ def order_create(request):
 def order_detail(request, pk):
     order = get_object_or_404(WorkOrder, pk=pk)
     profile = _get_profile(request.user)
+    if not _can_view_order(request.user, profile, order):
+        return HttpResponseForbidden('غير مسموح')
 
     meeting_link_form = None
     if ((request.user.is_superuser or (profile and profile.is_smartworld))
@@ -242,6 +283,7 @@ def order_detail(request, pk):
 
 
 @login_required
+@require_POST
 def order_accept(request, pk):
     order = get_object_or_404(WorkOrder, pk=pk)
     profile = _get_profile(request.user)
@@ -294,45 +336,56 @@ def order_log_service(request, pk):
     lang_lines = order.languages.select_related('language').all()
 
     if request.method == 'POST':
-        all_valid = True
-        records = []
+        # Records a translator logged stay linked to their assignment and are
+        # corrected in place; deleting them would orphan the assignment.
+        linked_records = {
+            assignment.language_line_id: assignment.service_record
+            for assignment in order.assignments.filter(
+                service_record__isnull=False
+            ).select_related('service_record')
+        }
+        line_forms = []
         for lang_line in lang_lines:
             prefix = f'lang_{lang_line.pk}'
-            actual_hours = request.POST.get(f'{prefix}_hours')
-            actual_pages = request.POST.get(f'{prefix}_pages')
-            num_translators = request.POST.get(f'{prefix}_translators', lang_line.num_translators)
-            notes = request.POST.get(f'{prefix}_notes', '')
-
-            record = ServiceRecord(
-                work_order=order,
-                language=lang_line.language,
-                num_translators=int(num_translators),
-                notes=notes,
+            record = linked_records.get(lang_line.pk) or ServiceRecord(
+                work_order=order, language=lang_line.language,
             )
-            if actual_hours:
-                record.actual_hours = Decimal(actual_hours)
-            if actual_pages:
-                record.actual_pages = Decimal(actual_pages)
-            record.calculate_amount()
-            records.append(record)
+            form = ServiceRecordForm({
+                'actual_hours': request.POST.get(f'{prefix}_hours', ''),
+                'actual_pages': request.POST.get(f'{prefix}_pages', ''),
+                'num_translators': request.POST.get(
+                    f'{prefix}_translators', lang_line.num_translators
+                ),
+                'notes': request.POST.get(f'{prefix}_notes', ''),
+            }, instance=record)
+            line_forms.append((lang_line, form))
 
-        # Delete old records and save new ones
-        order.service_records.all().delete()
-        for record in records:
-            record.save()
+        invalid = [(ll, form) for ll, form in line_forms if not form.is_valid()]
+        for lang_line, form in invalid:
+            errors = '، '.join(e for errs in form.errors.values() for e in errs)
+            messages.error(request, f'{lang_line.language_display}: {errors}')
 
-        # Create or update approval
-        approval, _ = WorkOrderApproval.objects.get_or_create(work_order=order)
-        approval.smartworld_approved_by = request.user
-        approval.smartworld_approved_at = timezone.now()
-        approval.save()
+        if not invalid:
+            with transaction.atomic():
+                kept = []
+                for _, form in line_forms:
+                    record = form.save(commit=False)
+                    record.calculate_amount()
+                    record.save()
+                    kept.append(record.pk)
+                order.service_records.exclude(pk__in=kept).delete()
 
-        order.status = WorkOrder.Status.PENDING_APPROVAL
-        order.save()
+                approval, _ = WorkOrderApproval.objects.get_or_create(work_order=order)
+                approval.smartworld_approved_by = request.user
+                approval.smartworld_approved_at = timezone.now()
+                approval.save()
 
-        notify_actuals_logged(order)
-        messages.success(request, 'تم تسجيل الخدمة الفعلية وإرسالها للاعتماد')
-        return redirect('order_detail', pk=pk)
+                order.status = WorkOrder.Status.PENDING_APPROVAL
+                order.save()
+
+            notify_actuals_logged(order)
+            messages.success(request, 'تم تسجيل الخدمة الفعلية وإرسالها للاعتماد')
+            return redirect('order_detail', pk=pk)
 
     return render(request, 'orders/log_service.html', {
         'order': order,
@@ -345,7 +398,11 @@ def order_log_service(request, pk):
 def order_approve(request, pk):
     order = get_object_or_404(WorkOrder, pk=pk)
     profile = _get_profile(request.user)
-    if not request.user.is_superuser and (not profile or not profile.is_pp_staff):
+    # PP staff may only approve orders of their own prosecution (or their own).
+    if not request.user.is_superuser and (
+        not profile or not profile.is_pp_staff
+        or not _can_view_order(request.user, profile, order)
+    ):
         return HttpResponseForbidden('غير مسموح')
     if order.status != WorkOrder.Status.PENDING_APPROVAL:
         messages.error(request, 'لا يمكن اعتماد هذا الأمر')
@@ -402,6 +459,9 @@ def order_approve(request, pk):
 @login_required
 def order_certificate(request, pk):
     order = get_object_or_404(WorkOrder, pk=pk)
+    profile = _get_profile(request.user)
+    if not _can_view_order(request.user, profile, order):
+        return HttpResponseForbidden('غير مسموح')
     try:
         certificate = order.certificate
     except CompletionCertificate.DoesNotExist:
@@ -414,13 +474,37 @@ def order_certificate(request, pk):
         'certificate': certificate,
         'service_records': service_records,
         'contract_number': settings.CONTRACT_NUMBER,
-        'profile': _get_profile(request.user),
+        'profile': profile,
+        'can_finalize': _can_finalize_certificate(request.user, profile),
     })
+
+
+@login_required
+@require_POST
+def certificate_finalize(request, pk):
+    """SmartWorld admin marks a certificate as invoiced.
+
+    Only finalized certificates count against the contract balance.
+    """
+    order = get_object_or_404(WorkOrder, pk=pk)
+    if not _can_finalize_certificate(request.user, _get_profile(request.user)):
+        return HttpResponseForbidden('غير مسموح')
+    certificate = get_object_or_404(CompletionCertificate, work_order=order)
+
+    if certificate.status == CompletionCertificate.Status.FINALIZED:
+        messages.info(request, 'الشهادة معتمدة نهائياً بالفعل')
+    else:
+        certificate.status = CompletionCertificate.Status.FINALIZED
+        certificate.save()
+        messages.success(request, 'تم الاعتماد النهائي للشهادة واحتسابها في رصيد العقد')
+    return redirect('order_certificate', pk=pk)
 
 
 @login_required
 def order_pdf(request, pk):
     order = get_object_or_404(WorkOrder, pk=pk)
+    if not _can_view_order(request.user, _get_profile(request.user), order):
+        return HttpResponseForbidden('غير مسموح')
     lang_lines = order.languages.select_related('language').all()
     import os, base64
     static_dir = settings.STATICFILES_DIRS[0] if settings.STATICFILES_DIRS else settings.STATIC_ROOT
@@ -452,6 +536,8 @@ def order_pdf(request, pk):
 @login_required
 def certificate_pdf(request, pk):
     order = get_object_or_404(WorkOrder, pk=pk)
+    if not _can_view_order(request.user, _get_profile(request.user), order):
+        return HttpResponseForbidden('غير مسموح')
     try:
         certificate = order.certificate
     except CompletionCertificate.DoesNotExist:
@@ -487,6 +573,7 @@ def certificate_pdf(request, pk):
 
 
 @login_required
+@require_POST
 def cm_accept_order(request, pk):
     """Contract manager accepts a submitted order"""
     order = get_object_or_404(WorkOrder, pk=pk)
@@ -655,6 +742,7 @@ def translator_available_orders(request):
 
 
 @login_required
+@require_POST
 def translator_self_assign(request, ll_pk):
     """AUTO mode: translator self-assigns to a language line"""
     profile = _get_profile(request.user)
@@ -707,6 +795,7 @@ def translator_self_assign(request, ll_pk):
 
 
 @login_required
+@require_POST
 def assignment_accept(request, pk):
     """Translator accepts their assignment"""
     assignment = get_object_or_404(OrderAssignment, pk=pk)
@@ -725,6 +814,7 @@ def assignment_accept(request, pk):
 
 
 @login_required
+@require_POST
 def assignment_decline(request, pk):
     """Translator declines their assignment"""
     assignment = get_object_or_404(OrderAssignment, pk=pk)
@@ -824,10 +914,11 @@ def prosecutors_by_prosecution(request):
     else:
         prosecutors = Prosecutor.objects.none()
 
-    options = '<option value="">---------</option>'
-    for p in prosecutors:
-        options += f'<option value="{p.pk}">{p.name}</option>'
-    return HttpResponse(options)
+    options = format_html_join(
+        '', '<option value="{}">{}</option>',
+        ((p.pk, p.name) for p in prosecutors),
+    )
+    return HttpResponse('<option value="">---------</option>' + options)
 
 
 # ── LiveKit Conference Views ──────────────────────────────────────────
@@ -858,6 +949,7 @@ def _can_join_conference(user, profile, order):
 
 
 @login_required
+@require_POST
 def conference_create(request, pk):
     """Create/start a LiveKit conference room for an online order."""
     order = get_object_or_404(WorkOrder, pk=pk)

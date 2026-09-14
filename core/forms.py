@@ -86,6 +86,21 @@ class ServiceRecordForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
 
+    def clean(self):
+        cleaned_data = super().clean()
+        hours = cleaned_data.get('actual_hours')
+        pages = cleaned_data.get('actual_pages')
+        if not hours and not pages and not self.has_error('actual_hours') \
+                and not self.has_error('actual_pages'):
+            raise forms.ValidationError('يرجى إدخال الساعات الفعلية أو الصفحات الفعلية')
+        for field, value in (('actual_hours', hours), ('actual_pages', pages)):
+            if value is not None and value < 0:
+                self.add_error(field, 'يجب ألا تكون القيمة سالبة')
+        translators = cleaned_data.get('num_translators')
+        if translators is not None and translators < 1:
+            self.add_error('num_translators', 'يجب أن يكون عدد المترجمين 1 على الأقل')
+        return cleaned_data
+
 
 class MeetingLinkForm(forms.Form):
     meeting_link = forms.URLField(
